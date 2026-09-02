@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "mitrasautosprinter",
+  "version": "${version}",
+  "name": "MitrasAutoSprinter",
+  "description": "Client-only auto-sprint toggle (K). Zero mixins, zero packets, vanilla-faithful behavior.",
+  "authors": [
+    "Mitra"
+  ],
+  "license": "CC0 1.0 Universal",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.mitra.client.MitrasAutoSprinterClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": ">=26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
