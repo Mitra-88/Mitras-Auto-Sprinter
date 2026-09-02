@@ -22,12 +22,11 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
-processResources {
-	def version = project.version
-	inputs.property "version", version
+tasks.withType(ProcessResources).configureEach {
+	inputs.property "version", project.version
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version
+		expand "version": project.version
 	}
 }
 
@@ -41,6 +40,8 @@ java {
 }
 
 jar {
+	archiveVersion = "${project.version}-mc${project.minecraft_version}"
+
 	def projectName = project.name
 	inputs.property "projectName", projectName
 

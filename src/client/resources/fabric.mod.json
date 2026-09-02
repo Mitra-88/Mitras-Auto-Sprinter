@@ -3,11 +3,12 @@
   "id": "mitrasautosprinter",
   "version": "${version}",
   "name": "MitrasAutoSprinter",
-  "description": "Client-only auto-sprint toggle (K). Zero mixins, zero packets, vanilla-faithful behavior.",
+  "description": "Automatically sprints while you move forward, if vanilla would let you sprint anyway. Toggle with a keybind. Client-side, no mixins.",
   "authors": [
-    "Mitra"
+    "Mitra-88"
   ],
   "license": "CC0 1.0 Universal",
+  "icon": "assets/mitrasautosprinter/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [
@@ -16,7 +17,7 @@
   },
   "depends": {
     "fabricloader": ">=0.19.3",
-    "minecraft": ">=26.2",
+    "minecraft": ">=26.1",
     "java": ">=25",
     "fabric-api": "*"
   }

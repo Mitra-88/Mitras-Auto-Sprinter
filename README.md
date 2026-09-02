@@ -6,8 +6,6 @@ Mitra's Auto Sprinter automatically starts sprinting when you're moving forward,
 
 Minimal. Lightweight. Does one thing.
 
----
-
 ## ✨ Features
 
 * 🏃 Automatically starts sprinting while moving forward
@@ -19,8 +17,6 @@ Minimal. Lightweight. Does one thing.
 * 📦 Completely client-side
 * ⚡ Extremely lightweight
 * 🚫 No mixins
-
----
 
 ## 📥 Installation
 
@@ -35,11 +31,9 @@ Your folder should look something like this:
 ```text
 .minecraft/
 └── mods/
-    ├── fabric-api-<version>.jar
+    ├── fabric-api-<version>-<mc-verison>.jar
     └── mitras-auto-sprinter-<version>-<mc-verison>.jar
 ```
-
----
 
 ## 🎮 Usage
 
@@ -52,8 +46,6 @@ The key can be changed here:
 ```text
 Options → Controls → Mitra's Auto Sprinter
 ```
-
----
 
 ## 🧠 Vanilla-friendly behavior
 
@@ -75,8 +67,6 @@ Vanilla Minecraft still has full control over stopping sprinting because of coll
 
 In practice, it's basically like holding the vanilla sprint key—except your finger gets to chill.
 
----
-
 ## 🟢 HUD
 
 When Auto Sprint is enabled, you'll see:
@@ -86,8 +76,6 @@ When Auto Sprint is enabled, you'll see:
 in the top-right corner of your screen.
 
 The indicator automatically hides when the vanilla HUD is hidden with `F1`.
-
----
 
 ## ⚡ Lightweight by design
 
@@ -101,15 +89,11 @@ It uses:
 
 When Auto Sprint is disabled, the mod has virtually nothing to do.
 
----
-
 ## 🌐 Multiplayer
 
 Sprinting is handled through Minecraft's normal client behavior.
 
 That said, **always follow the rules of the server you're playing on**.
-
----
 
 ## 📜 License
 
@@ -118,15 +102,3 @@ Licensed under **CC0 1.0 Universal**.
 Do whatever you want with it. Seriously.
 
 See [`LICENSE`](LICENSE) for the full license text.
-
----
-
-<div style="text-align: center">
-
-# 🏃 Mitra's Auto Sprinter
-
-**You hold W. The mod handles the sprinting.**
-
-Made for **Minecraft Fabric 26.2**.
-
-</div>

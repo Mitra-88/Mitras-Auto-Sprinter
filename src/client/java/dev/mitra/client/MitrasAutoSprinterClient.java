@@ -45,14 +45,14 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
     private static boolean sprintSetLastTick;
     private static int externallyClearedStreak;
     private static boolean conflictWarned;
+    private static int cachedHudTextWidth = -1;
 
     @Override
     public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(MitrasAutoSprinterClient::onEndClientTick);
 
         try {
-            HudElementRegistry.attachElementAfter(
-                    VanillaHudElements.MISC_OVERLAYS, HUD_ID, MitrasAutoSprinterClient::renderHud);
+            HudElementRegistry.attachElementAfter(VanillaHudElements.MISC_OVERLAYS, HUD_ID, MitrasAutoSprinterClient::renderHud);
         } catch (Throwable t) {
             hudDisabled = true;
             LOGGER.warn("[{}] HUD layer could not be attached (another mod may have modified the " + "vanilla HUD). Auto-sprint still works; the ON/OFF indicator is disabled.", MOD_ID, t);
@@ -107,8 +107,8 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
             if (externallyClearedStreak >= CONFLICT_WARN_TICKS && !conflictWarned) {
                 conflictWarned = true;
                 LOGGER.warn("[{}] Sprint has been repeatedly cleared by something other than " + "vanilla collision for {} ticks. This usually means another "
-                                + "sprint-related mod is also managing sprint state (you may see FOV " + "flicker), or rapid vanilla sprint cancels such as combat. This mod "
-                                + "only reports this once and never changes its own behavior.", MOD_ID, externallyClearedStreak);
+                + "sprint-related mod is also managing sprint state (you may see FOV " + "flicker), or rapid vanilla sprint cancels such as combat. This mod "
+                + "only reports this once and never changes its own behavior.", MOD_ID, externallyClearedStreak);
             }
         } else if (player.isSprinting()) {
             externallyClearedStreak = 0;
@@ -131,28 +131,29 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
 
     private static void renderHud(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         if (hudDisabled || !enabled || autoDisabled) return;
-
         try {
             if (graphics == null) return;
             Minecraft client = Minecraft.getInstance();
             if (client.player == null || client.level == null) return;
 
-            int textWidth = client.font.width(HUD_TEXT);
-            if (textWidth <= 0) return;
+            if (cachedHudTextWidth < 0) {
+                cachedHudTextWidth = client.font.width(HUD_TEXT);
+                if (cachedHudTextWidth <= 0) {
+                    cachedHudTextWidth = -1;
+                    return;
+                }
+            }
 
-            int x = graphics.guiWidth() - textWidth - 6;
+            int x = graphics.guiWidth() - cachedHudTextWidth - 6;
             int y = 6;
-
-            graphics.fill(x - 3, y - 3, x + textWidth + 3, y + client.font.lineHeight + 3, 0x66000000);
+            graphics.fill(x - 3, y - 3, x + cachedHudTextWidth + 3, y + client.font.lineHeight + 3, 0x66000000);
             graphics.text(client.font, HUD_TEXT, x, y, HUD_COLOR, true);
-
             hudErrors = 0;
-
         } catch (Throwable t) {
             hudErrors++;
             if (hudErrors >= MAX_HUD_ERRORS) {
                 hudDisabled = true;
-                LOGGER.error("[{}] HUD rendering failed {} times — indicator disabled. " + "The sprint toggle itself is unaffected.", MOD_ID, hudErrors, t);
+                LOGGER.error("[{}] HUD rendering failed {} times - indicator disabled. " + "The sprint toggle itself is unaffected.", MOD_ID, hudErrors, t);
             } else {
                 LOGGER.debug("[{}] Transient HUD render error ({}/{}).", MOD_ID, hudErrors, MAX_HUD_ERRORS, t);
             }
