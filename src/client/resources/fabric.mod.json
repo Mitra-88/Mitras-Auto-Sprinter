@@ -4,10 +4,12 @@
   "version": "${version}",
   "name": "MitrasAutoSprinter",
   "description": "Automatically sprints while you move forward, if vanilla would let you sprint anyway. Toggle with a keybind. Client-side, no mixins.",
-  "authors": [
-    "Mitra-88"
-  ],
-  "license": "CC0 1.0 Universal",
+  "contact": {
+    "homepage": "https://modrinth.com/mod/mitras-auto-sprinter",
+    "sources": "https://github.com/Mitra-88/Mitras-Auto-Sprinter"
+  },
+  "authors": ["Mitra-88"],
+  "license": "CC0-1.0",
   "icon": "assets/mitrasautosprinter/icon.png",
   "environment": "client",
   "entrypoints": {
