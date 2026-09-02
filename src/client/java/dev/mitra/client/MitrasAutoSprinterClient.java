@@ -13,7 +13,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.effect.MobEffects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,31 +20,24 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
 
     private static final String MOD_ID = "mitrasautosprinter";
     private static final Identifier HUD_ID = Identifier.fromNamespaceAndPath(MOD_ID, "sprint");
-
     private static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    private static final int MAX_CONSECUTIVE_ERRORS = 5;
-    private static final int MAX_HUD_ERRORS = 10;
-    private static final int CONFLICT_WARN_TICKS = 100;
-
-    private static final Component HUD_TEXT = Component.literal("Sprint ON");
-    private static final int HUD_COLOR = 0xFF55FF55;
+    private static final int COLOR_ON = 0xFF55FF55;
+    private static final int COLOR_BLOCKED = 0xFFFFFF55;
+    private static final int COLOR_OFF = 0xFFAAAAAA;
+    private static final int HUD_BACKGROUND = 0x66000000;
 
     private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));
 
     private static final KeyMapping TOGGLE_KEY = KeyMappingHelper.registerKeyMapping(
             new KeyMapping("key.mitrasautosprinter.toggle", InputConstants.Type.KEYSYM, InputConstants.KEY_K, CATEGORY));
 
-    private static boolean enabled;
-    private static int consecutiveErrors;
-    private static boolean autoDisabled;
-    private static boolean hudDisabled;
-    private static int hudErrors;
+    private static boolean enabled = false;
+    private static boolean wasEnabled = false;
 
-    private static boolean sprintSetLastTick;
-    private static int externallyClearedStreak;
-    private static boolean conflictWarned;
-    private static int cachedHudTextWidth = -1;
+    private static Component hudText = Component.translatable("hud.mitrasautosprinter.off");
+    private static int hudColor = COLOR_OFF;
+    private static int hudWidth = -1;
 
     @Override
     public void onInitializeClient() {
@@ -54,109 +46,105 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
         try {
             HudElementRegistry.attachElementAfter(VanillaHudElements.MISC_OVERLAYS, HUD_ID, MitrasAutoSprinterClient::renderHud);
         } catch (Throwable t) {
-            hudDisabled = true;
-            LOGGER.warn("[{}] HUD layer could not be attached (another mod may have modified the " + "vanilla HUD). Auto-sprint still works; the ON/OFF indicator is disabled.", MOD_ID, t);
+            LOGGER.warn("[{}] HUD layer could not be attached. Auto-sprint still works; " + "the status indicator is disabled.", MOD_ID, t);
         }
 
         LOGGER.info("[{}] Initialized. Toggle key: K (rebindable in Controls).", MOD_ID);
     }
 
     private static void onEndClientTick(Minecraft client) {
-        if (autoDisabled) return;
+        if (client == null) return;
 
-        try {
-            if (client == null) return;
-
-            while (TOGGLE_KEY.consumeClick()) {
-                enabled = !enabled;
-            }
-
-            if (enabled) {
-                applySprint(client);
-            }
-
-            consecutiveErrors = 0;
-
-        } catch (Throwable t) {
-            consecutiveErrors++;
-            LOGGER.error("[{}] Runtime error in tick handler ({}/{}): {}",
-                    MOD_ID, consecutiveErrors, MAX_CONSECUTIVE_ERRORS, t.getMessage(), t);
-
-            if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                autoDisabled = true;
-                enabled = false;
-                LOGGER.error("[{}] AUTO-DISABLED after {} consecutive errors to protect game " + "stability. The sprint toggle key is now inert until restart. "
-                                + "Please report this with the full log.", MOD_ID, consecutiveErrors);
-            }
+        while (TOGGLE_KEY.consumeClick()) {
+            enabled = !enabled;
         }
+
+        if (enabled) {
+            client.options.keySprint.setDown(true);
+        } else if (wasEnabled) {
+            client.options.keySprint.setDown(false);
+        }
+
+        wasEnabled = enabled;
+        updateHudStatus(client);
     }
 
-    private static void applySprint(Minecraft client) {
+    private static void updateHudStatus(Minecraft client) {
         LocalPlayer player = client.player;
 
-        boolean wasSetLastTick = sprintSetLastTick;
-        sprintSetLastTick = false;
-
-        if (player == null) {
-            externallyClearedStreak = 0;
-            return;
-        }
-
-        if (wasSetLastTick && !player.isSprinting() && !player.horizontalCollision) {
-            externallyClearedStreak++;
-            if (externallyClearedStreak >= CONFLICT_WARN_TICKS && !conflictWarned) {
-                conflictWarned = true;
-                LOGGER.warn("[{}] Sprint has been repeatedly cleared by something other than " + "vanilla collision for {} ticks. This usually means another "
-                + "sprint-related mod is also managing sprint state (you may see FOV " + "flicker), or rapid vanilla sprint cancels such as combat. This mod "
-                + "only reports this once and never changes its own behavior.", MOD_ID, externallyClearedStreak);
-            }
+        if (!enabled) {
+            hudText = Component.translatable("hud.mitrasautosprinter.off");
+            hudColor = COLOR_OFF;
+        } else if (player == null) {
+            hudText = Component.translatable("hud.mitrasautosprinter.on");
+            hudColor = COLOR_ON;
         } else if (player.isSprinting()) {
-            externallyClearedStreak = 0;
+            hudText = Component.translatable("hud.mitrasautosprinter.on");
+            hudColor = COLOR_ON;
+        } else {
+            hudText = Component.translatable("hud.mitrasautosprinter.blocked",
+                    getBlockedReason(client, player));
+            hudColor = COLOR_BLOCKED;
         }
 
-        if (!player.isAlive() || player.isRemoved()) return;
-        if (player.isSprinting()) return;
-        if (client.gui.screen() != null) return;
-        if (player.isSpectator()) return;
-        if (!client.options.keyUp.isDown()) return;
-        if (player.isShiftKeyDown()) return;
-        if (player.isUsingItem()) return;
-        if (player.isFallFlying()) return;
-        if (player.getFoodData().getFoodLevel() <= 6) return;
-        if (player.hasEffect(MobEffects.BLINDNESS)) return;
+        hudWidth = client.font.width(hudText);
+    }
 
-        player.setSprinting(true);
-        sprintSetLastTick = true;
+    private static Component getBlockedReason(Minecraft client, LocalPlayer player) {
+        if (!player.isAlive() || player.isRemoved()) {
+            return Component.translatable("reason.mitrasautosprinter.dead");
+        }
+        if (player.isSpectator()) {
+            return Component.translatable("reason.mitrasautosprinter.spectator");
+        }
+        if (player.isFallFlying() && !player.isUnderWater()) {
+            return Component.translatable("reason.mitrasautosprinter.elytra");
+        }
+        if (player.isUsingItem() && !player.isUnderWater()) {
+            return Component.translatable("reason.mitrasautosprinter.using_item");
+        }
+        if (player.isShiftKeyDown() && !player.isUnderWater()) {
+            return Component.translatable("reason.mitrasautosprinter.sneaking");
+        }
+        if (player.isMovingSlowly() && !player.isUnderWater()) {
+            return Component.translatable("reason.mitrasautosprinter.slow");
+        }
+        if (player.isPassenger()) {
+            return Component.translatable("reason.mitrasautosprinter.vehicle");
+        }
+        if (player.getFoodData().getFoodLevel() <= 6) {
+            return Component.translatable("reason.mitrasautosprinter.hungry");
+        }
+        if (!client.options.keyUp.isDown()) {
+            return Component.translatable("reason.mitrasautosprinter.standing");
+        }
+        if (player.horizontalCollision) {
+            return Component.translatable("reason.mitrasautosprinter.wall");
+        }
+        return Component.translatable("reason.mitrasautosprinter.waiting");
     }
 
     private static void renderHud(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
-        if (hudDisabled || !enabled || autoDisabled) return;
         try {
             if (graphics == null) return;
             Minecraft client = Minecraft.getInstance();
-            if (client.player == null || client.level == null) return;
 
-            if (cachedHudTextWidth < 0) {
-                cachedHudTextWidth = client.font.width(HUD_TEXT);
-                if (cachedHudTextWidth <= 0) {
-                    cachedHudTextWidth = -1;
-                    return;
-                }
+            Component text = hudText;
+            if (text == null) return;
+
+            int width = hudWidth;
+            if (width <= 0) {
+                width = client.font.width(text);
+                hudWidth = width;
+                if (width <= 0) return;
             }
 
-            int x = graphics.guiWidth() - cachedHudTextWidth - 6;
+            int x = graphics.guiWidth() - width - 6;
             int y = 6;
-            graphics.fill(x - 3, y - 3, x + cachedHudTextWidth + 3, y + client.font.lineHeight + 3, 0x66000000);
-            graphics.text(client.font, HUD_TEXT, x, y, HUD_COLOR, true);
-            hudErrors = 0;
+            graphics.fill(x - 3, y - 3, x + width + 3, y + client.font.lineHeight + 3, HUD_BACKGROUND);
+            graphics.text(client.font, text, x, y, hudColor, true);
         } catch (Throwable t) {
-            hudErrors++;
-            if (hudErrors >= MAX_HUD_ERRORS) {
-                hudDisabled = true;
-                LOGGER.error("[{}] HUD rendering failed {} times - indicator disabled. " + "The sprint toggle itself is unaffected.", MOD_ID, hudErrors, t);
-            } else {
-                LOGGER.debug("[{}] Transient HUD render error ({}/{}).", MOD_ID, hudErrors, MAX_HUD_ERRORS, t);
-            }
+            LOGGER.debug("[{}] HUD render error.", MOD_ID, t);
         }
     }
 }

@@ -1,4 +1,20 @@
 {
-  "key.category.mitrasautosprinter.main": "MitrasAutoSprinter",
-  "key.mitrasautosprinter.toggle": "Toggle Auto Sprint"
+  "key.category.mitrasautosprinter.main": "Mitras Auto Sprinter",
+  "key.mitrasautosprinter.toggle": "Toggle Auto Sprint",
+
+  "hud.mitrasautosprinter.on": "Sprint ON",
+  "hud.mitrasautosprinter.off": "Sprint OFF",
+  "hud.mitrasautosprinter.blocked": "Sprint OFF - %s",
+
+  "reason.mitrasautosprinter.dead": "Dead",
+  "reason.mitrasautosprinter.spectator": "Spectating",
+  "reason.mitrasautosprinter.elytra": "Flying",
+  "reason.mitrasautosprinter.using_item": "Using Item",
+  "reason.mitrasautosprinter.sneaking": "Sneaking",
+  "reason.mitrasautosprinter.slow": "Crawling",
+  "reason.mitrasautosprinter.vehicle": "In Vehicle",
+  "reason.mitrasautosprinter.hungry": "Too Hungry",
+  "reason.mitrasautosprinter.standing": "Not Moving",
+  "reason.mitrasautosprinter.wall": "Hit Wall",
+  "reason.mitrasautosprinter.waiting": "Starting..."
 }
