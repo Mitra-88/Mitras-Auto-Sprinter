@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
 
       - name: Set up JDK 25 (Zulu)
-        uses: actions/setup-java@273229181560643261a71a1544c22304f2a40df8
+        uses: actions/setup-java@0781fc6af30d3e1f67f2d243034e1a15cf5f3677
         with:
           distribution: 'zulu'
           java-version: '25'
