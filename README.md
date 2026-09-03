@@ -2,11 +2,11 @@
 
 ![Preview](images/preview.png)
 
-**TL;DR: Press `K`, hold `W`, sprint forever.** Something stopping you from sprinting? The HUD tells you what. And since the mod literally just holds your sprint key down, it's safe on servers. That's the whole mod.
+**TL;DR: Press K once to toggle sprint on or off.** If you can't sprint, the screen shows you why. It's safe for multiplayer servers because it just holds the sprint key for you. That's it.
 
 ## Why?
 
-I made this because I couldn't find an auto sprint mod I trusted, and I wanted an indicator that tells me why I'm not sprinting so my brain could finally stop overthinking it.
+I made this because I couldn't find an auto sprint mod I trusted, and I wanted an indicator that tells me why I'm not sprinting so my brain could finally stop overthinking it. also fixes [MC-263293 (Dying or world change causes toggle sprint to untoggle)](https://bugs.mojang.com/browse/MC/issues/MC-263293)
 
 ## Features
 
@@ -20,7 +20,7 @@ I made this because I couldn't find an auto sprint mod I trusted, and I wanted a
 
 ## What you need
 
-Fabric Loader + Fabric API. For the supported Minecraft versions, check the [Modrinth page](https://modrinth.com/mod/mitras-auto-sprinter) or the [latest release on GitHub](https://github.com/Mitra-88/Mitras-Auto-Sprinter) both always show the current one.
+[Fabric Loader](https://fabricmc.net/) + [Fabric API](https://modrinth.com/mod/fabric-api). For the supported Minecraft versions, check the [Modrinth page](https://modrinth.com/mod/mitras-auto-sprinter) or the [latest release on GitHub](https://github.com/Mitra-88/Mitras-Auto-Sprinter) both always show the current one.
 
 ## How to use
 
