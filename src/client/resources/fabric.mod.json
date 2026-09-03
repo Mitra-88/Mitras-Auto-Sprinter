@@ -3,7 +3,7 @@
   "id": "mitrasautosprinter",
   "version": "${version}",
   "name": "MitrasAutoSprinter",
-  "description": "Automatically sprints while you move forward, if vanilla would let you sprint anyway. Toggle with a keybind. Client-side, no mixins.",
+  "description": "A simple client-side auto sprint mod for Fabric.",
   "contact": {
     "homepage": "https://modrinth.com/mod/mitras-auto-sprinter",
     "sources": "https://github.com/Mitra-88/Mitras-Auto-Sprinter"

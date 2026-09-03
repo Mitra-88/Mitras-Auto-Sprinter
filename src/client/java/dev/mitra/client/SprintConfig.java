@@ -1,167 +1,169 @@
 package dev.mitra.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.EnumMap;
+import java.util.IllegalFormatException;
+import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public final class SprintConfig {
+final class SprintConfig {
 
-    private static final String CONFIG_FILE = "config/mitrasautosprinter.properties";
+    private static final Logger LOGGER = LoggerFactory.getLogger("mitrasautosprinter");
+    private static final Path FILE = Path.of("config/mitrasautosprinter.properties");
 
     private static final int MAX_TEXT_LENGTH = 64;
-    private static final int MAX_POSITION = 10000;
+    private static final int MAX_POSITION = 10_000;
+    private static final Pattern HEX_COLOR = Pattern.compile("#?([0-9a-fA-F]{8})");
 
-    private final Path file;
+    boolean sprintEnabled = false;
 
-    public boolean sprintEnabled = false;
+    boolean hudVisible = true;
+    boolean hudBackground = true;
+    int hudX = 200;
+    int hudY = 6;
+    int colorOn = 0xFF55FF55;
+    int colorBlocked = 0xFFFFFF55;
+    int colorOff = 0xFFAAAAAA;
+    int backgroundColor = 0x66000000;
 
-    public boolean hudVisible = true;
-    public boolean hudBackground = true;
-    public int hudX = 200;
-    public int hudY = 6;
+    String textOn = "Sprint ON";
+    String textOff = "Sprint OFF";
+    String textBlockedFormat = "Sprint OFF - %s";
 
-    public String hudColorOn = "#FF55FF55";
-    public String hudColorBlocked = "#FFFFFF55";
-    public String hudColorOff = "#FFAAAAAA";
-    public String hudBackgroundColor = "#66000000";
+    private final Map<SprintBlocker, String> reasonText = new EnumMap<>(SprintBlocker.class);
 
-    public String textOn = "Sprint ON";
-    public String textOff = "Sprint OFF";
-    public String textBlockedFormat = "Sprint OFF - %s";
-
-    public String reasonDead = "Dead";
-    public String reasonSpectator = "Spectating";
-    public String reasonBlind = "Blindness";
-    public String reasonElytra = "Flying";
-    public String reasonUsingItem = "Using Item";
-    public String reasonSneaking = "Sneaking";
-    public String reasonSlow = "Crawling";
-    public String reasonVehicle = "In Vehicle";
-    public String reasonHungry = "Too Hungry";
-    public String reasonStanding = "Not Moving";
-    public String reasonShallowWater = "Shallow Water";
-    public String reasonWall = "Hit Wall";
-    public String reasonWaiting = "Starting...";
-
-    public SprintConfig() {
-        this.file = Path.of(CONFIG_FILE);
+    SprintConfig() {
+        for (SprintBlocker reason : SprintBlocker.values()) {
+            reasonText.put(reason, reason.defaultText());
+        }
         load();
     }
 
-    public void save() {
+    String reasonText(SprintBlocker reason) {
+        return reasonText.get(reason);
+    }
+
+    void save() {
         Properties props = new Properties();
 
-        props.setProperty("sprintEnabled", String.valueOf(sprintEnabled));
-        props.setProperty("hudVisible", String.valueOf(hudVisible));
-        props.setProperty("hudBackground", String.valueOf(hudBackground));
-        props.setProperty("hudX", String.valueOf(hudX));
-        props.setProperty("hudY", String.valueOf(hudY));
-        props.setProperty("hudColorOn", hudColorOn);
-        props.setProperty("hudColorBlocked", hudColorBlocked);
-        props.setProperty("hudColorOff", hudColorOff);
-        props.setProperty("hudBackgroundColor", hudBackgroundColor);
+        props.setProperty("sprintEnabled", Boolean.toString(sprintEnabled));
+        props.setProperty("hudVisible", Boolean.toString(hudVisible));
+        props.setProperty("hudBackground", Boolean.toString(hudBackground));
+        props.setProperty("hudX", Integer.toString(hudX));
+        props.setProperty("hudY", Integer.toString(hudY));
+        props.setProperty("hudColorOn", toHex(colorOn));
+        props.setProperty("hudColorBlocked", toHex(colorBlocked));
+        props.setProperty("hudColorOff", toHex(colorOff));
+        props.setProperty("hudBackgroundColor", toHex(backgroundColor));
         props.setProperty("textOn", textOn);
         props.setProperty("textOff", textOff);
         props.setProperty("textBlockedFormat", textBlockedFormat);
-
-        props.setProperty("reasonDead", reasonDead);
-        props.setProperty("reasonSpectator", reasonSpectator);
-        props.setProperty("reasonBlind", reasonBlind);
-        props.setProperty("reasonElytra", reasonElytra);
-        props.setProperty("reasonUsingItem", reasonUsingItem);
-        props.setProperty("reasonSneaking", reasonSneaking);
-        props.setProperty("reasonSlow", reasonSlow);
-        props.setProperty("reasonVehicle", reasonVehicle);
-        props.setProperty("reasonHungry", reasonHungry);
-        props.setProperty("reasonStanding", reasonStanding);
-        props.setProperty("reasonShallowWater", reasonShallowWater);
-        props.setProperty("reasonWall", reasonWall);
-        props.setProperty("reasonWaiting", reasonWaiting);
+        for (SprintBlocker reason : SprintBlocker.values()) {
+            props.setProperty(reason.key(), reasonText.get(reason));
+        }
 
         try {
-            Files.createDirectories(this.file.getParent());
-            props.store(Files.newOutputStream(this.file), "MitrasAutoSprinter config");
+            Files.createDirectories(FILE.getParent());
+            try (var out = Files.newOutputStream(FILE)) {
+                props.store(out, "MitrasAutoSprinter config");
+            }
         } catch (IOException e) {
+            LOGGER.warn("Could not save the config to {}", FILE, e);
         }
     }
 
     private void load() {
-        if (!Files.exists(this.file)) {
+        if (!Files.isRegularFile(FILE)) {
             return;
         }
 
         Properties props = new Properties();
-        try {
-            props.load(Files.newInputStream(this.file));
+        try (var in = Files.newInputStream(FILE)) {
+            props.load(in);
         } catch (IOException | RuntimeException e) {
+            LOGGER.warn("Config file is unreadable; using defaults", e);
             return;
         }
 
         sprintEnabled = parseBoolean(props, "sprintEnabled", sprintEnabled);
+
         hudVisible = parseBoolean(props, "hudVisible", hudVisible);
         hudBackground = parseBoolean(props, "hudBackground", hudBackground);
-        hudX = parseClampedInt(props, "hudX", hudX);
-        hudY = parseClampedInt(props, "hudY", hudY);
-
-        hudColorOn = parseColor(props, "hudColorOn", hudColorOn);
-        hudColorBlocked = parseColor(props, "hudColorBlocked", hudColorBlocked);
-        hudColorOff = parseColor(props, "hudColorOff", hudColorOff);
-        hudBackgroundColor = parseColor(props, "hudBackgroundColor", hudBackgroundColor);
+        hudX = parseInt(props, "hudX", hudX);
+        hudY = parseInt(props, "hudY", hudY);
+        colorOn = parseColor(props, "hudColorOn", colorOn);
+        colorBlocked = parseColor(props, "hudColorBlocked", colorBlocked);
+        colorOff = parseColor(props, "hudColorOff", colorOff);
+        backgroundColor = parseColor(props, "hudBackgroundColor", backgroundColor);
 
         textOn = parseText(props, "textOn", textOn);
         textOff = parseText(props, "textOff", textOff);
         textBlockedFormat = parseFormat(props, textBlockedFormat);
 
-        reasonDead = parseText(props, "reasonDead", reasonDead);
-        reasonSpectator = parseText(props, "reasonSpectator", reasonSpectator);
-        reasonBlind = parseText(props, "reasonBlind", reasonBlind);
-        reasonElytra = parseText(props, "reasonElytra", reasonElytra);
-        reasonUsingItem = parseText(props, "reasonUsingItem", reasonUsingItem);
-        reasonSneaking = parseText(props, "reasonSneaking", reasonSneaking);
-        reasonSlow = parseText(props, "reasonSlow", reasonSlow);
-        reasonVehicle = parseText(props, "reasonVehicle", reasonVehicle);
-        reasonHungry = parseText(props, "reasonHungry", reasonHungry);
-        reasonStanding = parseText(props, "reasonStanding", reasonStanding);
-        reasonShallowWater = parseText(props, "reasonShallowWater", reasonShallowWater);
-        reasonWall = parseText(props, "reasonWall", reasonWall);
-        reasonWaiting = parseText(props, "reasonWaiting", reasonWaiting);
+        for (SprintBlocker reason : SprintBlocker.values()) {
+            reasonText.put(reason, parseText(props, reason.key(), reason.defaultText()));
+        }
     }
 
     private static boolean parseBoolean(Properties props, String key, boolean fallback) {
         String value = props.getProperty(key);
-        if (value == null) return fallback;
-        return Boolean.parseBoolean(value.trim());
+        return value != null ? Boolean.parseBoolean(value.trim()) : fallback;
     }
 
-    private static int parseClampedInt(Properties props, String key, int fallback) {
+    private static int parseInt(Properties props, String key, int fallback) {
         String value = props.getProperty(key);
-        if (value == null) return fallback;
+        if (value == null) {
+            return fallback;
+        }
         try {
-            return Math.clamp(Integer.parseInt(value.trim()), 0, SprintConfig.MAX_POSITION);
+            return Math.clamp(Integer.parseInt(value.trim()), 0, MAX_POSITION);
         } catch (NumberFormatException e) {
             return fallback;
         }
     }
 
+    private static int parseColor(Properties props, String key, int fallback) {
+        String value = props.getProperty(key);
+        if (value == null) {
+            return fallback;
+        }
+        Matcher matcher = HEX_COLOR.matcher(value.trim());
+        return matcher.matches() ? (int) Long.parseLong(matcher.group(1), 16) : fallback;
+    }
+
     private static String parseText(Properties props, String key, String fallback) {
         String value = props.getProperty(key);
-        if (value == null) return fallback;
+        if (value == null) {
+            return fallback;
+        }
         String trimmed = value.trim();
-        if (trimmed.isEmpty()) return fallback;
+        if (trimmed.isEmpty()) {
+            return fallback;
+        }
         return trimmed.length() > MAX_TEXT_LENGTH ? trimmed.substring(0, MAX_TEXT_LENGTH) : trimmed;
     }
 
     private static String parseFormat(Properties props, String fallback) {
-        String value = parseText(props, "textBlockedFormat", fallback);
-        if (!value.contains("%s")) return fallback;
-        return value;
+        String format = parseText(props, "textBlockedFormat", fallback);
+        if (!format.contains("%s")) {
+            return fallback;
+        }
+        try {
+            String ignored = String.format(format, "x");
+        } catch (IllegalFormatException e) {
+            return fallback;
+        }
+        return format;
     }
 
-    private static String parseColor(Properties props, String key, String fallback) {
-        String value = props.getProperty(key);
-        if (value == null) return fallback;
-        String trimmed = value.trim();
-        return trimmed.matches("#[0-9a-fA-F]{8}") ? trimmed : fallback;
+    private static String toHex(int color) {
+        return String.format("#%08X", color);
     }
 }

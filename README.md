@@ -8,11 +8,12 @@ It starts sprinting automatically when you move forward, as long as vanilla Mine
 
 - 🏃 Automatically sprints while moving forward
 - ⌨️ Toggle keybind, default `K`, rebindable in Controls
-- 🖥️ Small "Sprint ON" HUD indicator
+- 🖥️ HUD indicator that shows if you're sprinting — and why not when you aren't
+- 🖱️ Built-in HUD editor: drag the indicator anywhere on screen
+- 🎨 Customizable HUD text, colors, and position via config file
 - 📜 Follows vanilla sprint rules (see below)
 - 💻 Client-side only
-- 🪶 Lightweight (one tick handler, one HUD element, one boolean)
-- 🚫 No mixins
+- 🪶 Lightweight (one tick handler, one HUD element, no mixins)
 
 ## Usage
 
@@ -26,6 +27,18 @@ Rebind the key here:
 Options → Controls → Mitra's Auto Sprinter
 ```
 
+### HUD indicator
+
+While you're in a world, a small indicator shows the current state:
+
+- **Sprint ON** (green) — you're sprinting
+- **Sprint OFF - reason** (yellow) — something is blocking sprinting right now, e.g. `Blindness`, `Too Hungry` or `Hit Wall`
+- **Sprint OFF** (gray) — auto sprint is toggled off
+
+### Moving the HUD
+
+There's a second keybind, **Open HUD Editor** (unbound by default, rebind it in Controls). Press it in game, then drag the indicator wherever you like — it can't leave the screen. Press `ESC` to save the position.
+
 ## How it works
 
 Mitra's Auto Sprinter just holds the sprint key down for you that's it.
@@ -35,7 +48,18 @@ It won't sprint while you're sneaking, eating, blinded, too hungry, elytra flyin
 And if vanilla stops your sprint, say you run into a wall, it just stops, same as normal.
 Nothing is forced, faked, or sent to the server, so there's nothing for anti-cheats to flag.
 
-When something does block sprinting, the little HUD indicator tells you why.
+## Configuration
+
+All settings live in `config/mitrasautosprinter.properties`. The file is written whenever you toggle the mod or save the HUD position, and you can edit it while the game is closed to change:
+
+- `sprintEnabled` — whether auto sprint starts enabled
+- `hudVisible` / `hudBackground` — hide the HUD or its background
+- `hudX` / `hudY` — HUD position (also editable with the HUD editor)
+- `hudColorOn` / `hudColorBlocked` / `hudColorOff` / `hudBackgroundColor` — colors, as `#RRGGBBAA`
+- `textOn` / `textOff` / `textBlockedFormat` — HUD text; `%s` in the blocked format is replaced with the reason
+- `reasonDead`, `reasonHungry`, `reasonBlind`, ... — the label shown for each blocking reason
+
+Text values are capped at 64 characters. If a value is missing or invalid, the default is used.
 
 ## 📜 License
 
