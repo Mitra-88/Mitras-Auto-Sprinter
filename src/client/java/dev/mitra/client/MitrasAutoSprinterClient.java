@@ -11,8 +11,11 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.component.UseEffects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,20 +50,21 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
     private static final Component TEXT_ON  = Component.translatable("hud.mitrasautosprinter.on");
     private static final Component TEXT_OFF = Component.translatable("hud.mitrasautosprinter.off");
 
-    private static final Component REASON_DEAD       = Component.translatable("reason.mitrasautosprinter.dead");
-    private static final Component REASON_SPECTATOR  = Component.translatable("reason.mitrasautosprinter.spectator");
-    private static final Component REASON_ELYTRA     = Component.translatable("reason.mitrasautosprinter.elytra");
-    private static final Component REASON_USING_ITEM = Component.translatable("reason.mitrasautosprinter.using_item");
-    private static final Component REASON_SNEAKING   = Component.translatable("reason.mitrasautosprinter.sneaking");
-    private static final Component REASON_SLOW       = Component.translatable("reason.mitrasautosprinter.slow");
-    private static final Component REASON_VEHICLE    = Component.translatable("reason.mitrasautosprinter.vehicle");
-    private static final Component REASON_HUNGRY     = Component.translatable("reason.mitrasautosprinter.hungry");
-    private static final Component REASON_STANDING   = Component.translatable("reason.mitrasautosprinter.standing");
-    private static final Component REASON_WALL       = Component.translatable("reason.mitrasautosprinter.wall");
-    private static final Component REASON_WAITING    = Component.translatable("reason.mitrasautosprinter.waiting");
+    private static final Component REASON_DEAD          = Component.translatable("reason.mitrasautosprinter.dead");
+    private static final Component REASON_SPECTATOR     = Component.translatable("reason.mitrasautosprinter.spectator");
+    private static final Component REASON_BLIND         = Component.translatable("reason.mitrasautosprinter.blind");
+    private static final Component REASON_ELYTRA        = Component.translatable("reason.mitrasautosprinter.elytra");
+    private static final Component REASON_USING_ITEM    = Component.translatable("reason.mitrasautosprinter.using_item");
+    private static final Component REASON_SNEAKING      = Component.translatable("reason.mitrasautosprinter.sneaking");
+    private static final Component REASON_SLOW          = Component.translatable("reason.mitrasautosprinter.slow");
+    private static final Component REASON_VEHICLE       = Component.translatable("reason.mitrasautosprinter.vehicle");
+    private static final Component REASON_HUNGRY        = Component.translatable("reason.mitrasautosprinter.hungry");
+    private static final Component REASON_STANDING      = Component.translatable("reason.mitrasautosprinter.standing");
+    private static final Component REASON_SHALLOW_WATER = Component.translatable("reason.mitrasautosprinter.shallow_water");
+    private static final Component REASON_WALL          = Component.translatable("reason.mitrasautosprinter.wall");
+    private static final Component REASON_WAITING       = Component.translatable("reason.mitrasautosprinter.waiting");
 
     private static boolean enabled;
-
     private static boolean wasEnabled;
 
     private static Component hudText = TEXT_OFF;
@@ -70,8 +74,11 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
     private static Component lastReason;
     private static Component blockedText;
 
+    private static boolean hudRenderBroken;
+
     @Override
     public void onInitializeClient() {
+        ClientTickEvents.START_CLIENT_TICK.register(MitrasAutoSprinterClient::onStartClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(MitrasAutoSprinterClient::onEndClientTick);
 
         attachHudElement();
@@ -95,15 +102,17 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
         }
     }
 
-    private static void onEndClientTick(Minecraft client) {
-        if (client == null) {
-            return;
-        }
-
-        handleToggleKeyPress();
+    private static void onStartClientTick(Minecraft client) {
+        if (client == null) return;
 
         assertSprintKeyState(client);
+    }
 
+    private static void onEndClientTick(Minecraft client) {
+        if (client == null) return;
+
+        handleToggleKeyPress();
+        assertSprintKeyState(client);
         updateHudStatus(client);
     }
 
@@ -131,11 +140,14 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
         if (!enabled) {
             text = TEXT_OFF;
             color = COLOR_OFF;
-        } else if (player == null || player.isSprinting()) {
+        } else if (player == null) {
+            text = TEXT_ON;
+            color = COLOR_OFF;
+        } else if (player.isSprinting()) {
             text = TEXT_ON;
             color = COLOR_ON;
         } else {
-            text = getBlockedText(client, player);
+            text = getBlockedText(player);
             color = COLOR_BLOCKED;
         }
 
@@ -146,8 +158,8 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
         }
     }
 
-    private static Component getBlockedText(Minecraft client, LocalPlayer player) {
-        Component reason = getBlockedReason(client, player);
+    private static Component getBlockedText(LocalPlayer player) {
+        Component reason = getBlockedReason(player);
 
         if (reason != lastReason) {
             lastReason = reason;
@@ -157,28 +169,53 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
         return blockedText;
     }
 
-    private static Component getBlockedReason(Minecraft client, LocalPlayer player) {
+    private static Component getBlockedReason(LocalPlayer player) {
         if (!player.isAlive() || player.isRemoved())    return REASON_DEAD;
         if (player.isSpectator())                       return REASON_SPECTATOR;
-        if (player.isFallFlying() && !player.isUnderWater())   return REASON_ELYTRA;
+        if (!player.input.hasForwardImpulse())          return REASON_STANDING;
+        if (player.isMobilityRestricted())              return REASON_BLIND;
 
-        if (player.isUsingItem() && !player.isUnderWater())    return REASON_USING_ITEM;
-        if (player.isShiftKeyDown() && !player.isUnderWater()) return REASON_SNEAKING;
-        if (player.isMovingSlowly() && !player.isUnderWater()) return REASON_SLOW;
+        if (player.isPassenger()) {
+            Entity vehicle = player.getVehicle();
+            if (vehicle == null || !vehicleCanSprint(vehicle)) return REASON_VEHICLE;
+        } else if (!hasEnoughFoodToDoExhaustiveManoeuvres(player)) {
+            return REASON_HUNGRY;
+        }
 
-        if (player.isPassenger())                       return REASON_VEHICLE;
-        if (player.getFoodData().getFoodLevel() <= 6)   return REASON_HUNGRY;
+        if (isBlockedByShallowWater(player))            return REASON_SHALLOW_WATER;
+        if (isSlowDueToUsingItem(player))               return REASON_USING_ITEM;
+        if (player.isFallFlying() && !player.isUnderWater()) return REASON_ELYTRA;
 
-        if (!client.options.keyUp.isDown())             return REASON_STANDING;
+        if (player.isMovingSlowly() && !player.isUnderWater()) {
+            return player.isCrouching() ? REASON_SNEAKING : REASON_SLOW;
+        }
+
         if (player.horizontalCollision)                 return REASON_WALL;
 
         return REASON_WAITING;
     }
 
-    private static void renderHud(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
-        try {
-            if (graphics == null) return;
+    private static boolean isSlowDueToUsingItem(LocalPlayer player) {
+        return player.isUsingItem()
+                && !player.getUseItem().getOrDefault(DataComponents.USE_EFFECTS, UseEffects.DEFAULT).canSprint();
+    }
 
+    private static boolean hasEnoughFoodToDoExhaustiveManoeuvres(LocalPlayer player) {
+        return player.getFoodData().hasEnoughFood() || player.getAbilities().mayfly;
+    }
+
+    private static boolean isBlockedByShallowWater(LocalPlayer player) {
+        return !player.getAbilities().flying && player.isInShallowWater();
+    }
+
+    private static boolean vehicleCanSprint(Entity vehicle) {
+        return vehicle.canSprint() && vehicle.isLocalInstanceAuthoritative();
+    }
+
+    private static void renderHud(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+        if (hudRenderBroken || graphics == null) return;
+
+        try {
             Minecraft client = Minecraft.getInstance();
 
             Component text = hudText;
@@ -202,16 +239,10 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
                     HUD_BACKGROUND
             );
 
-            graphics.text(
-                    client.font,
-                    text,
-                    x,
-                    y,
-                    hudColor,
-                    true
-            );
+            graphics.text(client.font, text, x, y, hudColor, true);
         } catch (Throwable t) {
-            LOGGER.debug("[{}] Transient HUD render error.", MOD_ID, t);
+            hudRenderBroken = true;
+            LOGGER.debug("[{}] HUD render failed once; disabled for this session.", MOD_ID, t);
         }
     }
 }

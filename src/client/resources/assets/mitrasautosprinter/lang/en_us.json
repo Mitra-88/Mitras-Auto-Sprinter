@@ -8,6 +8,7 @@
 
   "reason.mitrasautosprinter.dead": "Dead",
   "reason.mitrasautosprinter.spectator": "Spectating",
+  "reason.mitrasautosprinter.blind": "Blindness",
   "reason.mitrasautosprinter.elytra": "Flying",
   "reason.mitrasautosprinter.using_item": "Using Item",
   "reason.mitrasautosprinter.sneaking": "Sneaking",
@@ -15,6 +16,7 @@
   "reason.mitrasautosprinter.vehicle": "In Vehicle",
   "reason.mitrasautosprinter.hungry": "Too Hungry",
   "reason.mitrasautosprinter.standing": "Not Moving",
+  "reason.mitrasautosprinter.shallow_water": "Shallow water",
   "reason.mitrasautosprinter.wall": "Hit Wall",
   "reason.mitrasautosprinter.waiting": "Starting..."
 }
