@@ -1,8 +1,10 @@
 {
-  "key.category.mitrasautosprinter.main": "Mitras Auto Sprinter",
+  "key.category.mitrasautosprinter.main": "Mitra's Auto Sprinter",
   "key.mitrasautosprinter.toggle": "Toggle Auto Sprint",
   "key.mitrasautosprinter.hud_editor": "Open HUD Editor",
 
   "hud.mitrasautosprinter.editor.title": "HUD Editor",
-  "hud.mitrasautosprinter.editor.instructions": "Drag the HUD to move it - it can't leave the screen. Press ESC to save."
+  "hud.mitrasautosprinter.editor.instructions": "Drag the HUD to move it - Press ESC to save.",
+
+  "message.mitrasautosprinter.hud_failed": "Mitra's Auto Sprinter: the sprint HUD failed to draw and is disabled for this session. Check the latest log for the error."
 }

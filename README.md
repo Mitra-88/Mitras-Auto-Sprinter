@@ -1,70 +1,82 @@
 # Mitra's Auto Sprinter
 
-A simple client-side auto sprint mod for Fabric.
+![Preview](images/preview.png)
 
-It starts sprinting automatically when you move forward, as long as vanilla Minecraft would normally allow sprinting. That's the whole mod.
+**TL;DR: Press `K`, hold `W`, sprint forever.** Something stopping you from sprinting? The HUD tells you what. And since the mod literally just holds your sprint key down, it's safe on servers. That's the whole mod.
+
+## Why?
+
+I made this because I couldn't find an auto sprint mod I trusted, and I wanted an indicator that tells me why I'm not sprinting so my brain could finally stop overthinking it.
 
 ## Features
 
-- 🏃 Automatically sprints while moving forward
-- ⌨️ Toggle keybind, default `K`, rebindable in Controls
-- 🖥️ HUD indicator that shows if you're sprinting — and why not when you aren't
-- 🖱️ Built-in HUD editor: drag the indicator anywhere on screen
-- 🎨 Customizable HUD text, colors, and position via config file
-- 📜 Follows vanilla sprint rules (see below)
+- 🏃 Sprint automatically whenever you move forward
+- ⌨️ Toggle it with `K` (rebindable, obviously)
+- 📊 A little HUD that shows if you're sprinting and *why not* when you aren't
+- 🖱️ Drag the HUD anywhere on screen with a built-in editor
+- 🎨 Change the HUD text and colors
 - 💻 Client-side only
-- 🪶 Lightweight (one tick handler, one HUD element, no mixins)
+- ⚡ Tiny and lightweight
 
-## Usage
+## What you need
 
-Press `K` to toggle Auto Sprint on or off.
+Fabric Loader + Fabric API. For the supported Minecraft versions, check the [Modrinth page](https://modrinth.com/mod/mitras-auto-sprinter) or the [latest release on GitHub](https://github.com/Mitra-88/Mitras-Auto-Sprinter) both always show the current one.
 
-When on, it sprints automatically while you hold forward, provided vanilla would allow sprinting at that moment.
+## How to use
 
-Rebind the key here:
+1. Drop the jar in your `mods` folder
+2. Join a world or server
+3. Press **K**
 
-```text
-Options → Controls → Mitra's Auto Sprinter
-```
+Now hold `W` and run. Press **K** again to turn it off.
 
-### HUD indicator
+The mod remembers your choice between restarts, but it starts *off* the first time you play so if nothing happens at first, just press K. Don't panic.
 
-While you're in a world, a small indicator shows the current state:
+Keybinds live in the usual spot: **Options → Controls → Mitra's Auto Sprinter**.
 
-- **Sprint ON** (green) — you're sprinting
-- **Sprint OFF - reason** (yellow) — something is blocking sprinting right now, e.g. `Blindness`, `Too Hungry` or `Hit Wall`
-- **Sprint OFF** (gray) — auto sprint is toggled off
+### The HUD
+
+While you play, a small indicator shows what's going on:
+
+- **Sprint ON** (green) - you're running
+- **Sprint OFF - Too Hungry** (yellow) - you *would* be sprinting, but something's in the way. It tells you what: *Hit Wall*, *Using Item*, *Blindness*, and so on. All the normal vanilla stuff.
+- **Sprint OFF** (gray) - the mod is off
 
 ### Moving the HUD
 
-There's a second keybind, **Open HUD Editor** (unbound by default, rebind it in Controls). Press it in game, then drag the indicator wherever you like — it can't leave the screen. Press `ESC` to save the position.
+Don't like where it sits? Fair.
 
-## How it works
+1. In **Options → Controls → Mitra's Auto Sprinter**, set a key for **Open HUD Editor** (it's unbound by default)
+2. Press it in game
+3. Drag the HUD wherever you want - it can't go off-screen (hopefully lol)
+4. Press **ESC** to save
 
-Mitra's Auto Sprinter just holds the sprint key down for you that's it.
-You'd get the exact same result by taping the key down or using vanilla's toggle-sprint option.
-Because of that, vanilla's rules still fully apply.
-It won't sprint while you're sneaking, eating, blinded, too hungry, elytra flying, and so on.
-And if vanilla stops your sprint, say you run into a wall, it just stops, same as normal.
-Nothing is forced, faked, or sent to the server, so there's nothing for anti-cheats to flag.
+Done.
 
-## Configuration
+## Is this safe on servers?
 
-All settings live in `config/mitrasautosprinter.properties`. The file is written whenever you toggle the mod or save the HUD position, and you can edit it while the game is closed to change:
+Yep. The mod literally just holds your sprint key down for you - the same as taping the key to your keyboard or using vanilla's toggle-sprint option. All of Minecraft's normal sprint rules still apply, so it won't sprint while you're sneaking, eating, elytra flying, or anything else vanilla says no to. Run into a wall? Sprint stops, exactly like normal.
 
-- `sprintEnabled` — whether auto sprint starts enabled
-- `hudVisible` / `hudBackground` — hide the HUD or its background
-- `hudX` / `hudY` — HUD position (also editable with the HUD editor)
-- `hudColorOn` / `hudColorBlocked` / `hudColorOff` / `hudBackgroundColor` — colors, as `#RRGGBBAA`
-- `textOn` / `textOff` / `textBlockedFormat` — HUD text; `%s` in the blocked format is replaced with the reason
-- `reasonDead`, `reasonHungry`, `reasonBlind`, ... — the label shown for each blocking reason
+Nothing is faked and nothing weird gets sent to the server, so there's nothing for anti-cheats to flag.
 
-Text values are capped at 64 characters. If a value is missing or invalid, the default is used.
+## Config (optional)
 
-## 📜 License
+You never *have* to touch this - the keybind and HUD editor cover everything you normally need. But if you like tinkering, everything lives in `config/mitrasautosprinter.properties`. It shows up after your first toggle, and you should only edit it **while the game is closed** (otherwise your changes get overwritten).
 
-Licensed under **CC0 1.0 Universal**.
+- `sprintEnabled` - whether the mod starts on or off
+- `hudVisible` / `hudBackground` - hide the HUD or its background box
+- `hudX` / `hudY` - HUD position (or just use the editor)
+- `hudColorOn` / `hudColorBlocked` / `hudColorOff` / `hudBackgroundColor` - the colors
+- `textOn` / `textOff` / `textBlockedFormat` - the HUD text (`%s` gets replaced with the reason)
+- `reasonHungry`, `reasonBlind`, etc. - rename each "why not" message
 
-Do whatever you want with it. Seriously.
+**Colors are just normal hex codes** - like `#55FF55`. Grab one from any color picker website, paste it in, done. Genuinely as simple as that.
 
-See [`LICENSE`](LICENSE) for the full license text.
+## Links
+
+- 📥 [Download on Modrinth](https://modrinth.com/mod/mitras-auto-sprinter)
+- 💻 [Source code on GitHub](https://github.com/Mitra-88/Mitras-Auto-Sprinter)
+
+## License
+
+CC0 1.0. Do whatever you want with it. See [`LICENSE`](LICENSE) for the full license text.

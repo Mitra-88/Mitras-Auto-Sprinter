@@ -1,5 +1,6 @@
 package dev.mitra.client;
 
+import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,11 +17,11 @@ import java.util.regex.Pattern;
 final class SprintConfig {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("mitrasautosprinter");
-    private static final Path FILE = Path.of("config/mitrasautosprinter.properties");
+    private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("mitrasautosprinter.properties");
 
     private static final int MAX_TEXT_LENGTH = 64;
     private static final int MAX_POSITION = 10_000;
-    private static final Pattern HEX_COLOR = Pattern.compile("#?([0-9a-fA-F]{8})");
+    private static final Pattern HEX_COLOR = Pattern.compile("#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
 
     boolean sprintEnabled = false;
 
@@ -135,7 +136,11 @@ final class SprintConfig {
             return fallback;
         }
         Matcher matcher = HEX_COLOR.matcher(value.trim());
-        return matcher.matches() ? (int) Long.parseLong(matcher.group(1), 16) : fallback;
+        if (!matcher.matches()) {
+            return fallback;
+        }
+        String hex = matcher.group(1);
+        return (int) Long.parseLong(hex.length() == 6 ? "FF" + hex : hex, 16);
     }
 
     private static String parseText(Properties props, String key, String fallback) {

@@ -65,11 +65,11 @@ final class HudEditorScreen extends Screen {
     }
 
     @Override
-    public void onClose() {
+    public void removed() {
+        super.removed();
         config.hudX = hudX;
         config.hudY = hudY;
         config.save();
-        super.onClose();
     }
 
     @Override
