@@ -1,22 +1,8 @@
 {
   "key.category.mitrasautosprinter.main": "Mitras Auto Sprinter",
   "key.mitrasautosprinter.toggle": "Toggle Auto Sprint",
+  "key.mitrasautosprinter.hud_editor": "Open HUD Editor",
 
-  "hud.mitrasautosprinter.on": "Sprint ON",
-  "hud.mitrasautosprinter.off": "Sprint OFF",
-  "hud.mitrasautosprinter.blocked": "Sprint OFF - %s",
-
-  "reason.mitrasautosprinter.dead": "Dead",
-  "reason.mitrasautosprinter.spectator": "Spectating",
-  "reason.mitrasautosprinter.blind": "Blindness",
-  "reason.mitrasautosprinter.elytra": "Flying",
-  "reason.mitrasautosprinter.using_item": "Using Item",
-  "reason.mitrasautosprinter.sneaking": "Sneaking",
-  "reason.mitrasautosprinter.slow": "Crawling",
-  "reason.mitrasautosprinter.vehicle": "In Vehicle",
-  "reason.mitrasautosprinter.hungry": "Too Hungry",
-  "reason.mitrasautosprinter.standing": "Not Moving",
-  "reason.mitrasautosprinter.shallow_water": "Shallow water",
-  "reason.mitrasautosprinter.wall": "Hit Wall",
-  "reason.mitrasautosprinter.waiting": "Starting..."
+  "hud.mitrasautosprinter.editor.title": "HUD Editor",
+  "hud.mitrasautosprinter.editor.instructions": "Drag the HUD to move it - it can't leave the screen. Press ESC to save."
 }
