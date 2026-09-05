@@ -129,9 +129,13 @@ final class SprintHud {
 
         try {
             var font = Minecraft.getInstance().font;
-            int x = clampToScreen(config.hudX, graphics.guiWidth(), fixedTextWidth());
-            int y = clampToScreen(config.hudY, graphics.guiHeight(), font.lineHeight);
-            drawAt(graphics, x, y);
+            int boxWidth = fixedTextWidth() + BACKGROUND_PADDING * 2;
+            int boxHeight = font.lineHeight + BACKGROUND_PADDING * 2;
+            int boxX = config.hudX == SprintConfig.X_CENTER ? (graphics.guiWidth() - boxWidth) / 2 : config.hudX - BACKGROUND_PADDING;
+            boxX = clampToScreen(boxX, graphics.guiWidth(), boxWidth);
+            int boxY = config.hudY - BACKGROUND_PADDING;
+            boxY = clampToScreen(boxY, graphics.guiHeight(), boxHeight);
+            drawAt(graphics, boxX + BACKGROUND_PADDING, boxY + BACKGROUND_PADDING);
         } catch (Throwable t) {
             renderBroken = true;
             LOGGER.debug("HUD rendering failed once; disabling it for this session.", t);

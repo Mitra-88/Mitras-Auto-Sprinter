@@ -30,13 +30,14 @@ final class AutoSprint {
     }
 
     void endClientTick(Minecraft client) {
-        holdSprintKey(client);
         if (++configCheckTimer >= CONFIG_CHECK_INTERVAL) {
             configCheckTimer = 0;
-            if (config.reloadLabelsIfChanged()) {
+            if (config.reloadIfChanged()) {
                 hud.refreshLabels();
+                enabled = config.sprintEnabled;
             }
         }
+        holdSprintKey(client);
         hud.update(client, enabled);
     }
 

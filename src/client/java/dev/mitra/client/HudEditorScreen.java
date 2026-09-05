@@ -1,7 +1,9 @@
 package dev.mitra.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
@@ -18,6 +20,7 @@ final class HudEditorScreen extends Screen {
     private final SprintHud hud;
 
     private boolean dragging;
+    private boolean moved;
     private double grabOffsetX;
     private double grabOffsetY;
     private int hudX;
@@ -33,6 +36,10 @@ final class HudEditorScreen extends Screen {
 
     @Override
     protected void init() {
+        if (hudX == SprintConfig.X_CENTER) {
+            int boxWidth = hud.width() + BORDER_PADDING * 2;
+            hudX = (width - boxWidth) / 2 + BORDER_PADDING;
+        }
         keepOnScreen();
     }
 
@@ -54,6 +61,7 @@ final class HudEditorScreen extends Screen {
         }
         hudX = (int) (event.x() - grabOffsetX);
         hudY = (int) (event.y() - grabOffsetY);
+        moved = true;
         keepOnScreen();
         return true;
     }
@@ -65,11 +73,40 @@ final class HudEditorScreen extends Screen {
     }
 
     @Override
+    public boolean keyPressed(@NonNull KeyEvent event) {
+        if (event.key() == InputConstants.KEY_R && isOnHud(scaledMouseX(), scaledMouseY())) {
+            resetToDefaultPosition();
+            return true;
+        }
+        return super.keyPressed(event);
+    }
+
+    private void resetToDefaultPosition() {
+        config.hudX = SprintConfig.X_CENTER;
+        config.hudY = SprintConfig.DEFAULT_HUD_Y;
+        config.save();
+        int boxWidth = hud.width() + BORDER_PADDING * 2;
+        hudX = (width - boxWidth) / 2 + BORDER_PADDING;
+        hudY = SprintConfig.DEFAULT_HUD_Y;
+        moved = false;
+    }
+
+    private double scaledMouseX() {
+        return minecraft.mouseHandler.getScaledXPos(minecraft.getWindow());
+    }
+
+    private double scaledMouseY() {
+        return minecraft.mouseHandler.getScaledYPos(minecraft.getWindow());
+    }
+
+    @Override
     public void removed() {
         super.removed();
-        config.hudX = hudX;
-        config.hudY = hudY;
-        config.save();
+        if (moved) {
+            config.hudX = hudX;
+            config.hudY = hudY;
+            config.save();
+        }
     }
 
     @Override
@@ -96,7 +133,9 @@ final class HudEditorScreen extends Screen {
     }
 
     private void keepOnScreen() {
-        hudX = SprintHud.clampToScreen(hudX, width, hud.width());
-        hudY = SprintHud.clampToScreen(hudY, height, font.lineHeight);
+        hudX = SprintHud.clampToScreen(hudX - BORDER_PADDING, width, hud.width() + BORDER_PADDING * 2)
+                + BORDER_PADDING;
+        hudY = SprintHud.clampToScreen(hudY - BORDER_PADDING, height, font.lineHeight + BORDER_PADDING * 2)
+                + BORDER_PADDING;
     }
 }

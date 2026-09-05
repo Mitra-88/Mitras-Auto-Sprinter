@@ -21,14 +21,16 @@ final class SprintConfig {
 
     private static final int MAX_TEXT_LENGTH = 64;
     private static final int MAX_POSITION = 10_000;
+    static final int X_CENTER = -1;
+    static final int DEFAULT_HUD_Y = 38;
     private static final Pattern HEX_COLOR = Pattern.compile("#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
 
     boolean sprintEnabled = false;
 
     boolean hudVisible = true;
-    boolean hudBackground = true;
-    int hudX = 200;
-    int hudY = 6;
+    boolean hudBackground = false;
+    int hudX = X_CENTER;
+    int hudY = DEFAULT_HUD_Y;
     int colorOn = 0xFF55FF55;
     int colorBlocked = 0xFFFFFF55;
     int colorOff = 0xFFAAAAAA;
@@ -53,7 +55,7 @@ final class SprintConfig {
         return reasonText.get(reason);
     }
 
-    boolean reloadLabelsIfChanged() {
+    boolean reloadIfChanged() {
         long stamp = fileStamp();
         if (stamp == lastSeenFileStamp || !Files.isRegularFile(FILE)) {
             return false;
@@ -62,7 +64,7 @@ final class SprintConfig {
         try (var in = Files.newInputStream(FILE)) {
             props.load(in);
         } catch (IOException | RuntimeException e) {
-            LOGGER.warn("Config file is unreadable; keeping the current labels", e);
+            LOGGER.warn("Config file is unreadable; keeping the current config", e);
             return false;
         }
         if (fileStamp() != stamp) {
@@ -70,8 +72,11 @@ final class SprintConfig {
         }
         lastSeenFileStamp = stamp;
 
+        sprintEnabled = parseBoolean(props, "sprintEnabled", sprintEnabled);
         hudVisible = parseBoolean(props, "hudVisible", hudVisible);
         hudBackground = parseBoolean(props, "hudBackground", hudBackground);
+        hudX = parseHudX(props, hudX);
+        hudY = parseHudY(props, hudY);
         colorOn = parseColor(props, "hudColorOn", colorOn);
         colorBlocked = parseColor(props, "hudColorBlocked", colorBlocked);
         colorOff = parseColor(props, "hudColorOff", colorOff);
@@ -139,8 +144,8 @@ final class SprintConfig {
 
         hudVisible = parseBoolean(props, "hudVisible", hudVisible);
         hudBackground = parseBoolean(props, "hudBackground", hudBackground);
-        hudX = parseInt(props, "hudX", hudX);
-        hudY = parseInt(props, "hudY", hudY);
+        hudX = parseHudX(props, hudX);
+        hudY = parseHudY(props, hudY);
         colorOn = parseColor(props, "hudColorOn", colorOn);
         colorBlocked = parseColor(props, "hudColorBlocked", colorBlocked);
         colorOff = parseColor(props, "hudColorOff", colorOff);
@@ -160,8 +165,21 @@ final class SprintConfig {
         return value != null ? Boolean.parseBoolean(value.trim()) : fallback;
     }
 
-    private static int parseInt(Properties props, String key, int fallback) {
-        String value = props.getProperty(key);
+    private static int parseHudX(Properties props, int fallback) {
+        String value = props.getProperty("hudX");
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            int parsed = Integer.parseInt(value.trim());
+            return parsed == X_CENTER ? X_CENTER : Math.clamp(parsed, 0, MAX_POSITION);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    private static int parseHudY(Properties props, int fallback) {
+        String value = props.getProperty("hudY");
         if (value == null) {
             return fallback;
         }

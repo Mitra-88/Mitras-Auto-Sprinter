@@ -61,13 +61,13 @@ Nothing is faked and nothing weird gets sent to the server, so there's nothing f
 
 ## Config (optional)
 
-You never *have* to touch this - the keybind and HUD editor cover everything you normally need. But if you like tinkering, everything lives in `config/mitrasautosprinter.properties`. It shows up after your first toggle, and you should only edit it **while the game is closed** (otherwise your changes get overwritten).
+You never *have* to touch this - the keybind and HUD editor cover everything you normally need. But if you like tinkering, everything lives in `config/mitrasautosprinter.properties`. It shows up after your first toggle.
 
-**Text, colors, and the two HUD toggles hot-reload**: just save the file while playing and the HUD updates within a second no restart needed. Only the position and `sprintEnabled` need the game closed (or the in-game editor).
+**Everything hot-reloads**: save the file while playing and it applies within a second - text, colors, position, toggles, all of it. No restart needed.
 
 - `sprintEnabled` - whether the mod starts on or off
 - `hudVisible` / `hudBackground` - hide the HUD or its background box
-- `hudX` / `hudY` - HUD position (or just use the editor)
+- `hudX` / `hudY` - HUD position. By default the HUD is centered at the top, just below the boss bar, and stays centered at any GUI scale or resolution. Set `hudX` to `-1` to get that back, or use the editor to place it freely
 - `hudColorOn` / `hudColorBlocked` / `hudColorOff` / `hudBackgroundColor` - the colors
 - `textOn` / `textOff` / `textBlockedFormat` - the HUD text (`%s` gets replaced with the reason)
 - `reasonHungry`, `reasonBlind`, etc. - rename each "why not" message
