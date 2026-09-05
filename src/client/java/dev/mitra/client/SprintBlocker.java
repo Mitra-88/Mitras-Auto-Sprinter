@@ -21,8 +21,7 @@ enum SprintBlocker {
     SNEAKING("reasonSneaking", "Sneaking", SprintBlocker::isSneaking),
     CRAWLING("reasonSlow", "Crawling", SprintBlocker::isCrawling),
     HIT_WALL("reasonWall", "Hit Wall", player -> player.horizontalCollision),
-
-    STARTING("reasonWaiting", "Starting...", _ -> false);
+    RIDING("reasonRiding", "Riding", LocalPlayer::isPassenger);
 
     private final String key;
     private final String defaultText;
@@ -48,7 +47,7 @@ enum SprintBlocker {
                 return reason;
             }
         }
-        return STARTING;
+        return null;
     }
 
     private static boolean isDeadOrGone(LocalPlayer player) {

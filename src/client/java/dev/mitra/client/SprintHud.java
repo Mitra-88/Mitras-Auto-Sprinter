@@ -20,28 +20,38 @@ final class SprintHud {
     private static final Identifier ELEMENT_ID = Identifier.fromNamespaceAndPath("mitrasautosprinter", "sprint");
 
     private static final int BACKGROUND_PADDING = 3;
+    private static final long WIDTH_RECHECK_NANOS = 1_000_000_000L;
 
     private final SprintConfig config;
 
-    private final Component textOn;
-    private final Component textOff;
+    private Component textOn;
+    private Component textOff;
     private final Map<SprintBlocker, Component> blockedText = new EnumMap<>(SprintBlocker.class);
 
     private Component text;
     private int color;
 
+    private Integer fixedWidth;
+    private long widthCheckedAt;
+
     private boolean renderBroken;
 
     SprintHud(SprintConfig config) {
         this.config = config;
-        this.textOn = Component.literal(config.textOn);
-        this.textOff = Component.literal(config.textOff);
+        refreshLabels();
+        this.text = textOff;
+        this.color = config.colorOff;
+    }
+
+    void refreshLabels() {
+        textOn = Component.literal(config.textOn);
+        textOff = Component.literal(config.textOff);
+        blockedText.clear();
         for (SprintBlocker reason : SprintBlocker.values()) {
             String label = String.format(config.textBlockedFormat, config.reasonText(reason));
             blockedText.put(reason, Component.literal(label));
         }
-        this.text = textOff;
-        this.color = config.colorOff;
+        fixedWidth = null;
     }
 
     void attach() {
@@ -65,26 +75,47 @@ final class SprintHud {
             text = textOn;
             color = config.colorOn;
         } else {
-            text = blockedText.get(SprintBlocker.blocking(player));
-            color = config.colorBlocked;
+            SprintBlocker reason = SprintBlocker.blocking(player);
+            if (reason == null) {
+                text = textOn;
+                color = config.colorOn;
+            } else {
+                text = blockedText.get(reason);
+                color = config.colorBlocked;
+            }
         }
     }
 
-    Component text() {
-        return text;
+    int width() {
+        return fixedTextWidth();
+    }
+
+    private int fixedTextWidth() {
+        long now = System.nanoTime();
+        if (fixedWidth == null || now - widthCheckedAt >= WIDTH_RECHECK_NANOS) {
+            var font = Minecraft.getInstance().font;
+            int w = Math.max(font.width(textOn), font.width(textOff));
+            for (Component component : blockedText.values()) {
+                w = Math.max(w, font.width(component));
+            }
+            fixedWidth = w;
+            widthCheckedAt = now;
+        }
+        return fixedWidth;
     }
 
     void drawAt(GuiGraphicsExtractor graphics, int x, int y) {
         var font = Minecraft.getInstance().font;
+        int boxWidth = fixedTextWidth();
         if (config.hudBackground) {
             graphics.fill(
                     x - BACKGROUND_PADDING,
                     y - BACKGROUND_PADDING,
-                    x + font.width(text) + BACKGROUND_PADDING,
+                    x + boxWidth + BACKGROUND_PADDING,
                     y + font.lineHeight + BACKGROUND_PADDING,
                     config.backgroundColor);
         }
-        graphics.text(font, text, x, y, color, true);
+        graphics.text(font, text, x + (boxWidth - font.width(text)) / 2, y, color, true);
     }
 
     static int clampToScreen(int position, int screenSize, int elementSize) {
@@ -98,7 +129,7 @@ final class SprintHud {
 
         try {
             var font = Minecraft.getInstance().font;
-            int x = clampToScreen(config.hudX, graphics.guiWidth(), font.width(text));
+            int x = clampToScreen(config.hudX, graphics.guiWidth(), fixedTextWidth());
             int y = clampToScreen(config.hudY, graphics.guiHeight(), font.lineHeight);
             drawAt(graphics, x, y);
         } catch (Throwable t) {

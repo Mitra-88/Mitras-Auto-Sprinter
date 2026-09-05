@@ -9,6 +9,9 @@ final class AutoSprint {
 
     private boolean enabled;
     private boolean holdingSprintKey;
+    private int configCheckTimer;
+
+    private static final int CONFIG_CHECK_INTERVAL = 20;
 
     AutoSprint(SprintConfig config, SprintHud hud) {
         this.config = config;
@@ -28,6 +31,12 @@ final class AutoSprint {
 
     void endClientTick(Minecraft client) {
         holdSprintKey(client);
+        if (++configCheckTimer >= CONFIG_CHECK_INTERVAL) {
+            configCheckTimer = 0;
+            if (config.reloadLabelsIfChanged()) {
+                hud.refreshLabels();
+            }
+        }
         hud.update(client, enabled);
     }
 

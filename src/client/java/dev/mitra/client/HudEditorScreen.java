@@ -85,22 +85,18 @@ final class HudEditorScreen extends Screen {
         graphics.outline(
                 hudX - BORDER_PADDING,
                 hudY - BORDER_PADDING,
-                hudTextWidth() + BORDER_PADDING * 2,
+                hud.width() + BORDER_PADDING * 2,
                 font.lineHeight + BORDER_PADDING * 2,
                 borderColor);
     }
 
     private boolean isOnHud(double x, double y) {
-        return x >= hudX - GRAB_TOLERANCE && x <= hudX + hudTextWidth() + GRAB_TOLERANCE
+        return x >= hudX - GRAB_TOLERANCE && x <= hudX + hud.width() + GRAB_TOLERANCE
                 && y >= hudY - GRAB_TOLERANCE && y <= hudY + font.lineHeight + GRAB_TOLERANCE;
     }
 
-    private int hudTextWidth() {
-        return font.width(hud.text());
-    }
-
     private void keepOnScreen() {
-        hudX = SprintHud.clampToScreen(hudX, width, hudTextWidth());
+        hudX = SprintHud.clampToScreen(hudX, width, hud.width());
         hudY = SprintHud.clampToScreen(hudY, height, font.lineHeight);
     }
 }

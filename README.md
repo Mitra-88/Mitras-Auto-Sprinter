@@ -63,6 +63,8 @@ Nothing is faked and nothing weird gets sent to the server, so there's nothing f
 
 You never *have* to touch this - the keybind and HUD editor cover everything you normally need. But if you like tinkering, everything lives in `config/mitrasautosprinter.properties`. It shows up after your first toggle, and you should only edit it **while the game is closed** (otherwise your changes get overwritten).
 
+**Text, colors, and the two HUD toggles hot-reload**: just save the file while playing and the HUD updates within a second no restart needed. Only the position and `sprintEnabled` need the game closed (or the in-game editor).
+
 - `sprintEnabled` - whether the mod starts on or off
 - `hudVisible` / `hudBackground` - hide the HUD or its background box
 - `hudX` / `hudY` - HUD position (or just use the editor)

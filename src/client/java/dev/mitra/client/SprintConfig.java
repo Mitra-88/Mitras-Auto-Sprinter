@@ -39,16 +39,58 @@ final class SprintConfig {
     String textBlockedFormat = "Sprint OFF - %s";
 
     private final Map<SprintBlocker, String> reasonText = new EnumMap<>(SprintBlocker.class);
+    private long lastSeenFileStamp;
 
     SprintConfig() {
         for (SprintBlocker reason : SprintBlocker.values()) {
             reasonText.put(reason, reason.defaultText());
         }
         load();
+        lastSeenFileStamp = fileStamp();
     }
 
     String reasonText(SprintBlocker reason) {
         return reasonText.get(reason);
+    }
+
+    boolean reloadLabelsIfChanged() {
+        long stamp = fileStamp();
+        if (stamp == lastSeenFileStamp || !Files.isRegularFile(FILE)) {
+            return false;
+        }
+        Properties props = new Properties();
+        try (var in = Files.newInputStream(FILE)) {
+            props.load(in);
+        } catch (IOException | RuntimeException e) {
+            LOGGER.warn("Config file is unreadable; keeping the current labels", e);
+            return false;
+        }
+        if (fileStamp() != stamp) {
+            return false;
+        }
+        lastSeenFileStamp = stamp;
+
+        hudVisible = parseBoolean(props, "hudVisible", hudVisible);
+        hudBackground = parseBoolean(props, "hudBackground", hudBackground);
+        colorOn = parseColor(props, "hudColorOn", colorOn);
+        colorBlocked = parseColor(props, "hudColorBlocked", colorBlocked);
+        colorOff = parseColor(props, "hudColorOff", colorOff);
+        backgroundColor = parseColor(props, "hudBackgroundColor", backgroundColor);
+        textOn = parseText(props, "textOn", textOn);
+        textOff = parseText(props, "textOff", textOff);
+        textBlockedFormat = parseFormat(props, textBlockedFormat);
+        for (SprintBlocker reason : SprintBlocker.values()) {
+            reasonText.put(reason, parseText(props, reason.key(), reason.defaultText()));
+        }
+        return true;
+    }
+
+    private long fileStamp() {
+        try {
+            return Files.getLastModifiedTime(FILE).toMillis();
+        } catch (IOException e) {
+            return -1;
+        }
     }
 
     void save() {
