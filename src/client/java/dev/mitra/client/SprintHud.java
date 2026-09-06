@@ -138,7 +138,11 @@ final class SprintHud {
             drawAt(graphics, boxX + BACKGROUND_PADDING, boxY + BACKGROUND_PADDING);
         } catch (Throwable t) {
             renderBroken = true;
-            LOGGER.debug("HUD rendering failed once; disabling it for this session.", t);
+            LOGGER.warn("HUD rendering failed once; disabling it for this session.", t);
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.sendSystemMessage(Component.translatable("message.mitrasautosprinter.hud_failed"));
+            }
         }
     }
 

@@ -116,7 +116,10 @@ final class HudEditorScreen extends Screen {
         graphics.fill(0, 0, width, height, 0x66000000);
         graphics.text(font, INSTRUCTIONS, (width - font.width(INSTRUCTIONS)) / 2, height / 2 - 40, 0xFFFFFFFF, true);
 
-        hud.drawAt(graphics, hudX, hudY);
+        try {
+            hud.drawAt(graphics, hudX, hudY);
+        } catch (Throwable t) {
+        }
 
         int borderColor = dragging ? 0xFF00FF00 : 0xFFFFFFFF;
         graphics.outline(
