@@ -1,14 +1,13 @@
-package dev.mitra.client;
+package dev.mitra.client.sprint;
 
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.component.UseEffects;
 
-import java.util.Optional;
 import java.util.function.Predicate;
 
-enum SprintBlocker {
+public enum SprintBlocker {
 
     DEAD("reasonDead", "Dead", SprintBlocker::isDeadOrGone),
     SPECTATOR("reasonSpectator", "Spectating", LocalPlayer::isSpectator),
@@ -28,27 +27,29 @@ enum SprintBlocker {
     private final String defaultText;
     private final Predicate<LocalPlayer> blocks;
 
+    private static final SprintBlocker[] VALUES = values();
+
     SprintBlocker(String key, String defaultText, Predicate<LocalPlayer> blocks) {
         this.key = key;
         this.defaultText = defaultText;
         this.blocks = blocks;
     }
 
-    String key() {
+    public String key() {
         return key;
     }
 
-    String defaultText() {
+    public String defaultText() {
         return defaultText;
     }
 
-    static Optional<SprintBlocker> blocking(LocalPlayer player) {
-        for (SprintBlocker reason : values()) {
+    public static SprintBlocker blocking(LocalPlayer player) {
+        for (SprintBlocker reason : VALUES) {
             if (reason.blocks.test(player)) {
-                return Optional.of(reason);
+                return reason;
             }
         }
-        return Optional.empty();
+        return null;
     }
 
     private static boolean isDeadOrGone(LocalPlayer player) {

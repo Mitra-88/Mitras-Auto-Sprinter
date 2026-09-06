@@ -1,6 +1,10 @@
 package dev.mitra.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.mitra.client.config.SprintConfig;
+import dev.mitra.client.hud.HudEditorScreen;
+import dev.mitra.client.hud.SprintHud;
+import dev.mitra.client.sprint.AutoSprint;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -47,7 +51,7 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
             if (screen instanceof LevelLoadingScreen || screen instanceof ProgressScreen) {
                 ScreenEvents.afterExtract(screen).register((_, graphics, _, _, _) -> {
                     if (config.hudVisible && hud.isSettling()) {
-                        hud.drawAtConfigured(graphics);
+                        hud.drawAtConfiguredPosition(graphics);
                     }
                 });
             }

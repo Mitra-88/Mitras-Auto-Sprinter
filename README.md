@@ -56,6 +56,8 @@ Don't like where it sits? Fair.
 
 Tip: press **R** while your mouse is over the HUD to snap it back to its default spot.
 
+In icon mode you can also resize it right in the editor: scroll your mouse wheel over the HUD (or press `+` / `-` on the keyboard, numpad works too) and it scales up and down live.
+
 ## Is this safe on servers?
 
 YES! The mod just holds your sprint key down for you automatically that's really all it's doing. It's the same as taping the key to your keyboard, or using vanilla's own toggle-sprint option. Nothing fancy going on under the hood.
@@ -72,6 +74,8 @@ You never *have* to touch this - the keybind and HUD editor cover everything you
 
 - `sprintEnabled` - whether the mod starts on or off
 - `hudVisible` / `hudBackground` - hide the HUD or its background box
+- `displayMode` - what the HUD shows: `text` (the label, default) or `icon` (the speed effect icon - full color while sprinting, faded when not, and it follows your resource packs)
+- `hudIconScale` - icon size multiplier when `displayMode` is `icon` (0.25 to 8; resize it live in the editor with the scroll wheel or `+` / `-`)
 - `hudX` / `hudY` - HUD position. By, default the HUD is centered at the top, just below the boss bar, and stays centered at any GUI scale or resolution. Set `hudX` or `hudY` to `-1` to auto-center that axis, or use the editor to place it freely
 - `hudColorOn` / `hudColorBlocked` / `hudColorOff` / `hudBackgroundColor` - the colors
 - `textOn` / `textOff` / `textBlockedFormat` / `textJoining` / `textTerrain` - the HUD text (`%s` gets replaced with the reason; the joining and terrain labels show while a world or server is loading, and disappear as soon as it is ready)

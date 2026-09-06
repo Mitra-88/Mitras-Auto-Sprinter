@@ -1,5 +1,6 @@
-package dev.mitra.client;
+package dev.mitra.client.config;
 
+import dev.mitra.client.sprint.SprintBlocker;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,38 +21,44 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-final class SprintConfig {
+public final class SprintConfig {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("mitrasautosprinter");
     private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("mitrasautosprinter.properties");
 
     private static final int MAX_TEXT_LENGTH = 64;
     private static final int MAX_POSITION = 10_000;
-    static final int AUTO_POSITION = -1;
-    static final int DEFAULT_HUD_Y = 38;
+    public static final int AUTO_POSITION = -1;
+    public static final int DEFAULT_HUD_Y = 38;
+    public static final String DISPLAY_MODE_TEXT = "text";
+    public static final String DISPLAY_MODE_ICON = "icon";
+    public static final double MIN_ICON_SCALE = 0.25;
+    public static final double MAX_ICON_SCALE = 8.0;
     private static final Pattern HEX_COLOR = Pattern.compile("#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
 
-    boolean sprintEnabled = false;
+    public boolean sprintEnabled = false;
 
-    boolean hudVisible = true;
-    boolean hudBackground = false;
-    int hudX = AUTO_POSITION;
-    int hudY = DEFAULT_HUD_Y;
-    int colorOn = 0xFF55FF55;
-    int colorBlocked = 0xFFFFFF55;
-    int colorOff = 0xFFAAAAAA;
-    int backgroundColor = 0x66000000;
+    public boolean hudVisible = true;
+    public boolean hudBackground = false;
+    public String displayMode = DISPLAY_MODE_TEXT;
+    public double hudIconScale = 1.0;
+    public int hudX = AUTO_POSITION;
+    public int hudY = DEFAULT_HUD_Y;
+    public int colorOn = 0xFF55FF55;
+    public int colorBlocked = 0xFFFFFF55;
+    public int colorOff = 0xFFAAAAAA;
+    public int backgroundColor = 0x66000000;
 
-    String textOn = "Sprint ON";
-    String textOff = "Sprint OFF";
-    String textJoining = "Joining...";
-    String textTerrain = "Loading terrain...";
-    String textBlockedFormat = "Sprint OFF - %s";
+    public String textOn = "Sprint ON";
+    public String textOff = "Sprint OFF";
+    public String textJoining = "Joining...";
+    public String textTerrain = "Loading terrain...";
+    public String textBlockedFormat = "Sprint OFF - %s";
 
     private final Map<SprintBlocker, String> reasonText = new EnumMap<>(SprintBlocker.class);
     private long lastSeenFileStamp;
 
-    SprintConfig() {
+    public SprintConfig() {
         for (SprintBlocker reason : SprintBlocker.values()) {
             reasonText.put(reason, reason.defaultText());
         }
@@ -59,11 +66,11 @@ final class SprintConfig {
         lastSeenFileStamp = fileStamp();
     }
 
-    String reasonText(SprintBlocker reason) {
+    public String reasonText(SprintBlocker reason) {
         return reasonText.get(reason);
     }
 
-    boolean reloadIfChanged() {
+    public boolean reloadIfChanged() {
         long stamp = fileStamp();
         if (stamp == lastSeenFileStamp || !Files.isRegularFile(FILE)) {
             return false;
@@ -83,15 +90,7 @@ final class SprintConfig {
         return true;
     }
 
-    private long fileStamp() {
-        try {
-            return Files.getLastModifiedTime(FILE).toMillis();
-        } catch (IOException e) {
-            return -1;
-        }
-    }
-
-    void save() {
+    public void save() {
         List<String> lines = new ArrayList<>();
 
         lines.add("#=====================================================");
@@ -109,6 +108,12 @@ final class SprintConfig {
 
         addComment(lines, "Show a background box behind the HUD text");
         addEntry(lines, "hudBackground", hudBackground);
+
+        addComment(lines, "What the HUD shows: \"text\" (the label) or \"icon\" (the speed effect icon)");
+        addEntry(lines, "displayMode", displayMode);
+
+        addComment(lines, "Icon size multiplier, only used when displayMode is icon (0.25 - 8)");
+        addEntry(lines, "hudIconScale", hudIconScale);
 
         addComment(lines,
                 "Position of the HUD on screen, in GUI-scaled pixels.",
@@ -148,6 +153,52 @@ final class SprintConfig {
             Files.write(FILE, lines, StandardCharsets.ISO_8859_1);
         } catch (IOException e) {
             LOGGER.warn("Could not save the config to {}", FILE, e);
+        }
+    }
+
+    private long fileStamp() {
+        try {
+            return Files.getLastModifiedTime(FILE).toMillis();
+        } catch (IOException e) {
+            return -1;
+        }
+    }
+
+    private void load() {
+        if (!Files.isRegularFile(FILE)) {
+            return;
+        }
+
+        Properties props = new Properties();
+        try (var in = Files.newInputStream(FILE)) {
+            props.load(in);
+        } catch (IOException | RuntimeException e) {
+            LOGGER.warn("Config file is unreadable; using defaults", e);
+            return;
+        }
+
+        applyParsed(props);
+    }
+
+    private void applyParsed(Properties props) {
+        sprintEnabled = parseBoolean(props, "sprintEnabled", sprintEnabled);
+        hudVisible = parseBoolean(props, "hudVisible", hudVisible);
+        hudBackground = parseBoolean(props, "hudBackground", hudBackground);
+        displayMode = parseDisplayMode(props, displayMode);
+        hudIconScale = parseIconScale(props, hudIconScale);
+        hudX = parsePosition(props, "hudX", hudX);
+        hudY = parsePosition(props, "hudY", hudY);
+        colorOn = parseColor(props, "hudColorOn", colorOn);
+        colorBlocked = parseColor(props, "hudColorBlocked", colorBlocked);
+        colorOff = parseColor(props, "hudColorOff", colorOff);
+        backgroundColor = parseColor(props, "hudBackgroundColor", backgroundColor);
+        textOn = parseText(props, "textOn", textOn);
+        textOff = parseText(props, "textOff", textOff);
+        textJoining = parseText(props, "textJoining", textJoining);
+        textTerrain = parseText(props, "textTerrain", textTerrain);
+        textBlockedFormat = parseFormat(props, textBlockedFormat);
+        for (SprintBlocker reason : SprintBlocker.values()) {
+            reasonText.put(reason, parseText(props, reason.key(), reason.defaultText()));
         }
     }
 
@@ -193,45 +244,30 @@ final class SprintConfig {
         };
     }
 
-    private void load() {
-        if (!Files.isRegularFile(FILE)) {
-            return;
-        }
-
-        Properties props = new Properties();
-        try (var in = Files.newInputStream(FILE)) {
-            props.load(in);
-        } catch (IOException | RuntimeException e) {
-            LOGGER.warn("Config file is unreadable; using defaults", e);
-            return;
-        }
-
-        applyParsed(props);
-    }
-
-    private void applyParsed(Properties props) {
-        sprintEnabled = parseBoolean(props, "sprintEnabled", sprintEnabled);
-        hudVisible = parseBoolean(props, "hudVisible", hudVisible);
-        hudBackground = parseBoolean(props, "hudBackground", hudBackground);
-        hudX = parsePosition(props, "hudX", hudX);
-        hudY = parsePosition(props, "hudY", hudY);
-        colorOn = parseColor(props, "hudColorOn", colorOn);
-        colorBlocked = parseColor(props, "hudColorBlocked", colorBlocked);
-        colorOff = parseColor(props, "hudColorOff", colorOff);
-        backgroundColor = parseColor(props, "hudBackgroundColor", backgroundColor);
-        textOn = parseText(props, "textOn", textOn);
-        textOff = parseText(props, "textOff", textOff);
-        textJoining = parseText(props, "textJoining", textJoining);
-        textTerrain = parseText(props, "textTerrain", textTerrain);
-        textBlockedFormat = parseFormat(props, textBlockedFormat);
-        for (SprintBlocker reason : SprintBlocker.values()) {
-            reasonText.put(reason, parseText(props, reason.key(), reason.defaultText()));
-        }
-    }
-
     private static boolean parseBoolean(Properties props, String key, boolean fallback) {
         String value = props.getProperty(key);
         return value != null ? Boolean.parseBoolean(value.trim()) : fallback;
+    }
+
+    private static String parseDisplayMode(Properties props, String fallback) {
+        String value = props.getProperty("displayMode");
+        if (value == null) {
+            return fallback;
+        }
+        String trimmed = value.trim();
+        return trimmed.equals(DISPLAY_MODE_TEXT) || trimmed.equals(DISPLAY_MODE_ICON) ? trimmed : fallback;
+    }
+
+    private static double parseIconScale(Properties props, double fallback) {
+        String value = props.getProperty("hudIconScale");
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Math.clamp(Double.parseDouble(value.trim()), MIN_ICON_SCALE, MAX_ICON_SCALE);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     private static int parsePosition(Properties props, String key, int fallback) {

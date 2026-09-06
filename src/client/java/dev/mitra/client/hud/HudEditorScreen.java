@@ -1,32 +1,44 @@
-package dev.mitra.client;
+package dev.mitra.client.hud;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.mitra.client.config.SprintConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
+import org.lwjgl.glfw.GLFW;
 
-final class HudEditorScreen extends Screen {
+import static dev.mitra.client.config.SprintConfig.AUTO_POSITION;
+import static dev.mitra.client.config.SprintConfig.DEFAULT_HUD_Y;
+import static dev.mitra.client.config.SprintConfig.MAX_ICON_SCALE;
+import static dev.mitra.client.config.SprintConfig.MIN_ICON_SCALE;
+
+public final class HudEditorScreen extends Screen {
 
     private static final Component INSTRUCTIONS =
             Component.translatable("hud.mitrasautosprinter.editor.instructions");
 
     private static final int GRAB_TOLERANCE = 4;
     private static final int BORDER_PADDING = 3;
+    private static final double SCALE_STEP = 0.1;
+    private static final int OVERLAY_SHADE = 0x66000000;
+    private static final int BORDER_COLOR = 0xFFFFFFFF;
+    private static final int BORDER_COLOR_DRAGGING = 0xFF00FF00;
 
     private final SprintConfig config;
     private final SprintHud hud;
 
     private boolean dragging;
     private boolean moved;
+    private boolean scaleChanged;
     private double grabOffsetX;
     private double grabOffsetY;
     private int hudX;
     private int hudY;
 
-    HudEditorScreen(SprintConfig config, SprintHud hud) {
+    public HudEditorScreen(SprintConfig config, SprintHud hud) {
         super(Component.translatable("hud.mitrasautosprinter.editor.title"));
         this.config = config;
         this.hud = hud;
@@ -36,12 +48,12 @@ final class HudEditorScreen extends Screen {
 
     @Override
     protected void init() {
-        if (hudX == SprintConfig.AUTO_POSITION) {
-            int boxWidth = hud.width() + BORDER_PADDING * 2;
+        if (hudX == AUTO_POSITION) {
+            int boxWidth = hud.elementWidth() + BORDER_PADDING * 2;
             hudX = (width - boxWidth) / 2 + BORDER_PADDING;
         }
-        if (hudY == SprintConfig.AUTO_POSITION) {
-            int boxHeight = font.lineHeight + BORDER_PADDING * 2;
+        if (hudY == AUTO_POSITION) {
+            int boxHeight = hud.elementHeight() + BORDER_PADDING * 2;
             hudY = (height - boxHeight) / 2 + BORDER_PADDING;
         }
         keepOnScreen();
@@ -77,21 +89,51 @@ final class HudEditorScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(@NonNull KeyEvent event) {
-        if (event.key() == InputConstants.KEY_R && isOnHud(scaledMouseX(), scaledMouseY())) {
-            resetToDefaultPosition();
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (hud.isIconMode() && isOnHud(mouseX, mouseY) && scrollY != 0) {
+            changeScale(scrollY > 0 ? SCALE_STEP : -SCALE_STEP);
             return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
+    public boolean keyPressed(@NonNull KeyEvent event) {
+        if (isOnHud(scaledMouseX(), scaledMouseY())) {
+            if (event.key() == InputConstants.KEY_R) {
+                resetToDefaultPosition();
+                return true;
+            }
+            if (hud.isIconMode()) {
+                if (event.key() == InputConstants.KEY_EQUALS
+                        || event.key() == InputConstants.KEY_ADD) {
+                    changeScale(SCALE_STEP);
+                    return true;
+                }
+                if (event.key() == InputConstants.KEY_MINUS
+                        || event.key() == GLFW.GLFW_KEY_KP_SUBTRACT) {
+                    changeScale(-SCALE_STEP);
+                    return true;
+                }
+            }
         }
         return super.keyPressed(event);
     }
 
+    private void changeScale(double delta) {
+        double scale = Math.round((config.hudIconScale + delta) * 10.0) / 10.0;
+        config.hudIconScale = Math.clamp(scale, MIN_ICON_SCALE, MAX_ICON_SCALE);
+        scaleChanged = true;
+        keepOnScreen();
+    }
+
     private void resetToDefaultPosition() {
-        config.hudX = SprintConfig.AUTO_POSITION;
-        config.hudY = SprintConfig.DEFAULT_HUD_Y;
+        config.hudX = AUTO_POSITION;
+        config.hudY = DEFAULT_HUD_Y;
         config.save();
-        int boxWidth = hud.width() + BORDER_PADDING * 2;
+        int boxWidth = hud.elementWidth() + BORDER_PADDING * 2;
         hudX = (width - boxWidth) / 2 + BORDER_PADDING;
-        hudY = SprintConfig.DEFAULT_HUD_Y;
+        hudY = DEFAULT_HUD_Y;
         moved = false;
     }
 
@@ -109,6 +151,8 @@ final class HudEditorScreen extends Screen {
         if (moved) {
             config.hudX = hudX;
             config.hudY = hudY;
+        }
+        if (moved || scaleChanged) {
             config.save();
         }
     }
@@ -117,7 +161,7 @@ final class HudEditorScreen extends Screen {
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
 
-        graphics.fill(0, 0, width, height, 0x66000000);
+        graphics.fill(0, 0, width, height, OVERLAY_SHADE);
         graphics.text(font, INSTRUCTIONS, (width - font.width(INSTRUCTIONS)) / 2, height / 2 - 40, 0xFFFFFFFF, true);
 
         try {
@@ -125,24 +169,23 @@ final class HudEditorScreen extends Screen {
         } catch (Throwable ignored) {
         }
 
-        int borderColor = dragging ? 0xFF00FF00 : 0xFFFFFFFF;
         graphics.outline(
                 hudX - BORDER_PADDING,
                 hudY - BORDER_PADDING,
-                hud.width() + BORDER_PADDING * 2,
-                font.lineHeight + BORDER_PADDING * 2,
-                borderColor);
+                hud.elementWidth() + BORDER_PADDING * 2,
+                hud.elementHeight() + BORDER_PADDING * 2,
+                dragging ? BORDER_COLOR_DRAGGING : BORDER_COLOR);
     }
 
     private boolean isOnHud(double x, double y) {
-        return x >= hudX - GRAB_TOLERANCE && x <= hudX + hud.width() + GRAB_TOLERANCE
-                && y >= hudY - GRAB_TOLERANCE && y <= hudY + font.lineHeight + GRAB_TOLERANCE;
+        return x >= hudX - GRAB_TOLERANCE && x <= hudX + hud.elementWidth() + GRAB_TOLERANCE
+                && y >= hudY - GRAB_TOLERANCE && y <= hudY + hud.elementHeight() + GRAB_TOLERANCE;
     }
 
     private void keepOnScreen() {
-        hudX = SprintHud.clampToScreen(hudX - BORDER_PADDING, width, hud.width() + BORDER_PADDING * 2)
+        hudX = SprintHud.clampToScreen(hudX - BORDER_PADDING, width, hud.elementWidth() + BORDER_PADDING * 2)
                 + BORDER_PADDING;
-        hudY = SprintHud.clampToScreen(hudY - BORDER_PADDING, height, font.lineHeight + BORDER_PADDING * 2)
+        hudY = SprintHud.clampToScreen(hudY - BORDER_PADDING, height, hud.elementHeight() + BORDER_PADDING * 2)
                 + BORDER_PADDING;
     }
 }

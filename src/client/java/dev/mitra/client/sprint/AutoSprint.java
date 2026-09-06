@@ -1,8 +1,12 @@
-package dev.mitra.client;
+package dev.mitra.client.sprint;
 
+import dev.mitra.client.config.SprintConfig;
+import dev.mitra.client.hud.SprintHud;
 import net.minecraft.client.Minecraft;
 
-final class AutoSprint {
+public final class AutoSprint {
+
+    private static final int CONFIG_CHECK_INTERVAL = 20;
 
     private final SprintConfig config;
     private final SprintHud hud;
@@ -11,25 +15,23 @@ final class AutoSprint {
     private boolean holdingSprintKey;
     private int configCheckTimer;
 
-    private static final int CONFIG_CHECK_INTERVAL = 20;
-
-    AutoSprint(SprintConfig config, SprintHud hud) {
+    public AutoSprint(SprintConfig config, SprintHud hud) {
         this.config = config;
         this.hud = hud;
         this.enabled = config.sprintEnabled;
     }
 
-    void toggle() {
+    public void toggle() {
         enabled = !enabled;
         config.sprintEnabled = enabled;
         config.save();
     }
 
-    void startClientTick(Minecraft client) {
+    public void startClientTick(Minecraft client) {
         holdSprintKey(client);
     }
 
-    void endClientTick(Minecraft client) {
+    public void endClientTick(Minecraft client) {
         if (++configCheckTimer >= CONFIG_CHECK_INTERVAL) {
             configCheckTimer = 0;
             if (config.reloadIfChanged()) {
