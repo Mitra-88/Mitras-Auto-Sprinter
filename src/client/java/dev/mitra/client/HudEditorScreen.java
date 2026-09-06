@@ -36,9 +36,13 @@ final class HudEditorScreen extends Screen {
 
     @Override
     protected void init() {
-        if (hudX == SprintConfig.X_CENTER) {
+        if (hudX == SprintConfig.AUTO_POSITION) {
             int boxWidth = hud.width() + BORDER_PADDING * 2;
             hudX = (width - boxWidth) / 2 + BORDER_PADDING;
+        }
+        if (hudY == SprintConfig.AUTO_POSITION) {
+            int boxHeight = font.lineHeight + BORDER_PADDING * 2;
+            hudY = (height - boxHeight) / 2 + BORDER_PADDING;
         }
         keepOnScreen();
     }
@@ -82,7 +86,7 @@ final class HudEditorScreen extends Screen {
     }
 
     private void resetToDefaultPosition() {
-        config.hudX = SprintConfig.X_CENTER;
+        config.hudX = SprintConfig.AUTO_POSITION;
         config.hudY = SprintConfig.DEFAULT_HUD_Y;
         config.save();
         int boxWidth = hud.width() + BORDER_PADDING * 2;
@@ -118,7 +122,7 @@ final class HudEditorScreen extends Screen {
 
         try {
             hud.drawAt(graphics, hudX, hudY);
-        } catch (Throwable t) {
+        } catch (Throwable ignored) {
         }
 
         int borderColor = dragging ? 0xFF00FF00 : 0xFFFFFFFF;

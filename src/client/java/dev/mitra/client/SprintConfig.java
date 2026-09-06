@@ -5,10 +5,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.IllegalFormatException;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
@@ -21,7 +27,7 @@ final class SprintConfig {
 
     private static final int MAX_TEXT_LENGTH = 64;
     private static final int MAX_POSITION = 10_000;
-    static final int X_CENTER = -1;
+    static final int AUTO_POSITION = -1;
     static final int DEFAULT_HUD_Y = 38;
     private static final Pattern HEX_COLOR = Pattern.compile("#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
 
@@ -29,7 +35,7 @@ final class SprintConfig {
 
     boolean hudVisible = true;
     boolean hudBackground = false;
-    int hudX = X_CENTER;
+    int hudX = AUTO_POSITION;
     int hudY = DEFAULT_HUD_Y;
     int colorOn = 0xFF55FF55;
     int colorBlocked = 0xFFFFFF55;
@@ -38,6 +44,8 @@ final class SprintConfig {
 
     String textOn = "Sprint ON";
     String textOff = "Sprint OFF";
+    String textJoining = "Joining...";
+    String textTerrain = "Loading terrain...";
     String textBlockedFormat = "Sprint OFF - %s";
 
     private final Map<SprintBlocker, String> reasonText = new EnumMap<>(SprintBlocker.class);
@@ -71,22 +79,7 @@ final class SprintConfig {
             return false;
         }
         lastSeenFileStamp = stamp;
-
-        sprintEnabled = parseBoolean(props, "sprintEnabled", sprintEnabled);
-        hudVisible = parseBoolean(props, "hudVisible", hudVisible);
-        hudBackground = parseBoolean(props, "hudBackground", hudBackground);
-        hudX = parseHudX(props, hudX);
-        hudY = parseHudY(props, hudY);
-        colorOn = parseColor(props, "hudColorOn", colorOn);
-        colorBlocked = parseColor(props, "hudColorBlocked", colorBlocked);
-        colorOff = parseColor(props, "hudColorOff", colorOff);
-        backgroundColor = parseColor(props, "hudBackgroundColor", backgroundColor);
-        textOn = parseText(props, "textOn", textOn);
-        textOff = parseText(props, "textOff", textOff);
-        textBlockedFormat = parseFormat(props, textBlockedFormat);
-        for (SprintBlocker reason : SprintBlocker.values()) {
-            reasonText.put(reason, parseText(props, reason.key(), reason.defaultText()));
-        }
+        applyParsed(props);
         return true;
     }
 
@@ -99,32 +92,105 @@ final class SprintConfig {
     }
 
     void save() {
-        Properties props = new Properties();
+        List<String> lines = new ArrayList<>();
 
-        props.setProperty("sprintEnabled", Boolean.toString(sprintEnabled));
-        props.setProperty("hudVisible", Boolean.toString(hudVisible));
-        props.setProperty("hudBackground", Boolean.toString(hudBackground));
-        props.setProperty("hudX", Integer.toString(hudX));
-        props.setProperty("hudY", Integer.toString(hudY));
-        props.setProperty("hudColorOn", toHex(colorOn));
-        props.setProperty("hudColorBlocked", toHex(colorBlocked));
-        props.setProperty("hudColorOff", toHex(colorOff));
-        props.setProperty("hudBackgroundColor", toHex(backgroundColor));
-        props.setProperty("textOn", textOn);
-        props.setProperty("textOff", textOff);
-        props.setProperty("textBlockedFormat", textBlockedFormat);
-        for (SprintBlocker reason : SprintBlocker.values()) {
-            props.setProperty(reason.key(), reasonText.get(reason));
-        }
+        lines.add("#=====================================================");
+        lines.add("# MitrasAutoSprinter Configuration");
+        lines.add("# Last saved: " + new Date());
+        lines.add("#=====================================================");
+
+        addSection(lines, "SPRINT BEHAVIOR");
+        addComment(lines, "Master toggle for auto-sprint functionality");
+        addEntry(lines, "sprintEnabled", sprintEnabled);
+
+        addSection(lines, "HUD DISPLAY");
+        addComment(lines, "Show/hide the sprint status HUD overlay");
+        addEntry(lines, "hudVisible", hudVisible);
+
+        addComment(lines, "Show a background box behind the HUD text");
+        addEntry(lines, "hudBackground", hudBackground);
+
+        addComment(lines,
+                "Position of the HUD on screen, in GUI-scaled pixels.",
+                "Set hudX or hudY to -1 to auto-center that axis at any",
+                "resolution or GUI scale");
+        addEntry(lines, "hudX", hudX);
+        addEntry(lines, "hudY", hudY);
+
+        addSection(lines, "HUD COLORS",
+                "Format: ARGB hex, escaped as \\#AARRGGBB",
+                "(AA = alpha/transparency, RR/GG/BB = red/green/blue)");
+        addEntry(lines, "hudBackgroundColor", toHex(backgroundColor));
+        addEntry(lines, "hudColorOn", toHex(colorOn));
+        addEntry(lines, "hudColorOff", toHex(colorOff));
+        addEntry(lines, "hudColorBlocked", toHex(colorBlocked));
+
+        addSection(lines, "HUD TEXT");
+        addEntry(lines, "textOn", textOn);
+        addEntry(lines, "textOff", textOff);
+        addEntry(lines, "textJoining", textJoining);
+        addEntry(lines, "textTerrain", textTerrain);
+
+        addComment(lines,
+                "Shown when sprint is blocked. %s is replaced with the",
+                "blocking reason (see REASON LABELS below)");
+        addEntry(lines, "textBlockedFormat", textBlockedFormat);
+
+        addSection(lines, "REASON LABELS",
+                "Text shown in place of %s above, depending on why",
+                "sprinting is currently blocked");
+        Arrays.stream(SprintBlocker.values())
+                .sorted(Comparator.comparing(SprintBlocker::key))
+                .forEach(reason -> addEntry(lines, reason.key(), reasonText.get(reason)));
 
         try {
             Files.createDirectories(FILE.getParent());
-            try (var out = Files.newOutputStream(FILE)) {
-                props.store(out, "MitrasAutoSprinter config");
-            }
+            Files.write(FILE, lines, StandardCharsets.ISO_8859_1);
         } catch (IOException e) {
             LOGGER.warn("Could not save the config to {}", FILE, e);
         }
+    }
+
+    private static void addSection(List<String> lines, String title, String... comments) {
+        lines.add("");
+        lines.add("#-----------------------------------------------------");
+        lines.add("# " + title);
+        for (String comment : comments) {
+            lines.add("# " + comment);
+        }
+        lines.add("#-----------------------------------------------------");
+    }
+
+    private static void addComment(List<String> lines, String... commentLines) {
+        for (String comment : commentLines) {
+            lines.add("# " + comment);
+        }
+    }
+
+    private static void addEntry(List<String> lines, String key, Object value) {
+        lines.add(key + "=" + escapeValue(String.valueOf(value)));
+    }
+
+    private static String escapeValue(String value) {
+        StringBuilder out = new StringBuilder(value.length() + 8);
+        for (int i = 0; i < value.length(); i++) {
+            out.append(escaped(value.charAt(i)));
+        }
+        return out.toString();
+    }
+
+    private static String escaped(char c) {
+        return switch (c) {
+            case '\\' -> "\\\\";
+            case '=' -> "\\=";
+            case ':' -> "\\:";
+            case '#' -> "\\#";
+            case '!' -> "\\!";
+            case '\n' -> "\\n";
+            case '\r' -> "\\r";
+            case '\t' -> "\\t";
+            default -> c >= 0x20 && c <= 0x7e ? Character.toString(c) : "\\u%04x".formatted((int) c);
+        };
     }
 
     private void load() {
@@ -140,21 +206,24 @@ final class SprintConfig {
             return;
         }
 
-        sprintEnabled = parseBoolean(props, "sprintEnabled", sprintEnabled);
+        applyParsed(props);
+    }
 
+    private void applyParsed(Properties props) {
+        sprintEnabled = parseBoolean(props, "sprintEnabled", sprintEnabled);
         hudVisible = parseBoolean(props, "hudVisible", hudVisible);
         hudBackground = parseBoolean(props, "hudBackground", hudBackground);
-        hudX = parseHudX(props, hudX);
-        hudY = parseHudY(props, hudY);
+        hudX = parsePosition(props, "hudX", hudX);
+        hudY = parsePosition(props, "hudY", hudY);
         colorOn = parseColor(props, "hudColorOn", colorOn);
         colorBlocked = parseColor(props, "hudColorBlocked", colorBlocked);
         colorOff = parseColor(props, "hudColorOff", colorOff);
         backgroundColor = parseColor(props, "hudBackgroundColor", backgroundColor);
-
         textOn = parseText(props, "textOn", textOn);
         textOff = parseText(props, "textOff", textOff);
+        textJoining = parseText(props, "textJoining", textJoining);
+        textTerrain = parseText(props, "textTerrain", textTerrain);
         textBlockedFormat = parseFormat(props, textBlockedFormat);
-
         for (SprintBlocker reason : SprintBlocker.values()) {
             reasonText.put(reason, parseText(props, reason.key(), reason.defaultText()));
         }
@@ -165,26 +234,14 @@ final class SprintConfig {
         return value != null ? Boolean.parseBoolean(value.trim()) : fallback;
     }
 
-    private static int parseHudX(Properties props, int fallback) {
-        String value = props.getProperty("hudX");
+    private static int parsePosition(Properties props, String key, int fallback) {
+        String value = props.getProperty(key);
         if (value == null) {
             return fallback;
         }
         try {
             int parsed = Integer.parseInt(value.trim());
-            return parsed == X_CENTER ? X_CENTER : Math.clamp(parsed, 0, MAX_POSITION);
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
-    }
-
-    private static int parseHudY(Properties props, int fallback) {
-        String value = props.getProperty("hudY");
-        if (value == null) {
-            return fallback;
-        }
-        try {
-            return Math.clamp(Integer.parseInt(value.trim()), 0, MAX_POSITION);
+            return parsed == AUTO_POSITION ? AUTO_POSITION : Math.clamp(parsed, 0, MAX_POSITION);
         } catch (NumberFormatException e) {
             return fallback;
         }

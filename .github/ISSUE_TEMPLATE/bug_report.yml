@@ -1,0 +1,89 @@
+name: 🐞 Bug report
+description: something broke, looks wrong, or the hud is acting up
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        thanks for taking the time to report this
+
+        real quick before you start - vanilla minecraft is weird about sprinting. a classic one: sneaking while you're *already* sprinting keeps the sprint going. that's the game, not the mod (still true as of 26.2).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: what happened?
+      description: |
+        what did you see, and what did you expect instead.
+        screenshots or a short clip help a ton just drag & drop them right into this box.
+      placeholder: |
+        the hud said "Sprint OFF - Too Hungry" but my hunger bar was full.
+        should've said Sprint ON.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: where does this happen?
+      options:
+        - singleplayer
+        - a server (multiplayer)
+        - both
+    validations:
+      required: true
+
+  - type: dropdown
+    id: vanilla
+    attributes:
+      label: does the same thing happen without the mod?
+      description: if you can, test with the mod removed. this one answer saves me so much time.
+      options:
+        - "no, only with the mod"
+        - "yes, vanilla does it too"
+        - didn't check
+    validations:
+      required: true
+
+  - type: textarea
+    id: versions
+    attributes:
+      label: versions
+      description: all four pls. the mod version is in the jar filename in your mods folder.
+      placeholder: |
+        Mitra's Auto Sprinter: 1.5.0
+        Minecraft: 26.2
+        Fabric Loader: 0.19.3
+        Fabric API: 0.159.0+26.2
+    validations:
+      required: true
+
+  - type: textarea
+    id: mods
+    attributes:
+      label: other mods installed?
+      description: list them if you can movement, sprint and hud mods are extra interesting. "just this one" is a totally valid answer.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: log file
+      description: |
+        upload `logs/latest.log` to https://mclo.gs/ and paste the link here especially if something crashed or the hud vanished.
+        if the config might be involved, paste `config/mitrasautosprinter.properties` too (heads up: it hot-reloads, so don't edit it mid-test unless you mean to).
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: how do i see this happen?
+      description: |
+        exact steps are gold. "press K, walk forward, sneak, jump" beats "it happens sometimes" every time.
+        and tell me if it's every time or just sometimes.
+      placeholder: |
+        1. press K to turn the mod on
+        2. walk forward
+        3. open the hud editor
+        4. ...
+    validations:
+      required: true

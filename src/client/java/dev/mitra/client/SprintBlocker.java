@@ -5,6 +5,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.component.UseEffects;
 
+import java.util.Optional;
 import java.util.function.Predicate;
 
 enum SprintBlocker {
@@ -41,13 +42,13 @@ enum SprintBlocker {
         return defaultText;
     }
 
-    static SprintBlocker blocking(LocalPlayer player) {
+    static Optional<SprintBlocker> blocking(LocalPlayer player) {
         for (SprintBlocker reason : values()) {
             if (reason.blocks.test(player)) {
-                return reason;
+                return Optional.of(reason);
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     private static boolean isDeadOrGone(LocalPlayer player) {

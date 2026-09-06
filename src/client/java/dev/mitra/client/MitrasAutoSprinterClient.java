@@ -2,9 +2,14 @@ package dev.mitra.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.screens.LevelLoadingScreen;
+import net.minecraft.client.gui.screens.ProgressScreen;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +39,19 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
         SprintConfig config = new SprintConfig();
         SprintHud hud = new SprintHud(config);
         AutoSprint sprint = new AutoSprint(config, hud);
+
+        ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((_, _) -> hud.settleFor());
+        ClientPlayConnectionEvents.JOIN.register((_, _, _) -> hud.settleFor());
+
+        ScreenEvents.AFTER_INIT.register((_, screen, _, _) -> {
+            if (screen instanceof LevelLoadingScreen || screen instanceof ProgressScreen) {
+                ScreenEvents.afterExtract(screen).register((_, graphics, _, _, _) -> {
+                    if (config.hudVisible && hud.isSettling()) {
+                        hud.drawAtConfigured(graphics);
+                    }
+                });
+            }
+        });
 
         ClientTickEvents.START_CLIENT_TICK.register(sprint::startClientTick);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

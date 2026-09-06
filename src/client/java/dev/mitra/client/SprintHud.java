@@ -5,14 +5,20 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.LevelLoadingScreen;
+import net.minecraft.client.gui.screens.ProgressScreen;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Optional;
 
 final class SprintHud {
 
@@ -26,10 +32,19 @@ final class SprintHud {
 
     private Component textOn;
     private Component textOff;
+    private Component textJoining;
+    private Component textTerrain;
     private final Map<SprintBlocker, Component> blockedText = new EnumMap<>(SprintBlocker.class);
 
     private Component text;
     private int color;
+
+    private int settleTicks;
+    private LocalPlayer lastPlayer;
+    private Vec3 lastPosition;
+
+    private static final int SETTLE_MAX_TICKS = 100;
+    private static final double TELEPORT_JUMP_BLOCKS_SQR = 16.0 * 16.0;
 
     private Integer fixedWidth;
     private long widthCheckedAt;
@@ -46,12 +61,18 @@ final class SprintHud {
     void refreshLabels() {
         textOn = Component.literal(config.textOn);
         textOff = Component.literal(config.textOff);
+        textJoining = Component.literal(config.textJoining);
+        textTerrain = Component.literal(config.textTerrain);
         blockedText.clear();
         for (SprintBlocker reason : SprintBlocker.values()) {
             String label = String.format(config.textBlockedFormat, config.reasonText(reason));
             blockedText.put(reason, Component.literal(label));
         }
         fixedWidth = null;
+    }
+
+    void settleFor() {
+        settleTicks = SETTLE_MAX_TICKS;
     }
 
     void attach() {
@@ -63,6 +84,40 @@ final class SprintHud {
     }
 
     void update(Minecraft client, boolean sprintEnabled) {
+        detectWorldChange(client);
+
+        if (settleTicks > 0) {
+            Component settling = settlingLabel(client);
+            if (settling != null) {
+                text = settling;
+                color = config.colorOff;
+                settleTicks--;
+                return;
+            }
+            settleTicks = 0;
+        }
+        updateSprintState(client, sprintEnabled);
+    }
+
+    private void detectWorldChange(Minecraft client) {
+        LocalPlayer player = client.player;
+
+        if (player != lastPlayer) {
+            lastPlayer = player;
+            lastPosition = player != null ? player.position() : null;
+            if (player != null) {
+                settleFor();
+            }
+        } else if (player != null) {
+            Vec3 position = player.position();
+            if (lastPosition != null && position.distanceToSqr(lastPosition) > TELEPORT_JUMP_BLOCKS_SQR) {
+                settleFor();
+            }
+            lastPosition = position;
+        }
+    }
+
+    private void updateSprintState(Minecraft client, boolean sprintEnabled) {
         LocalPlayer player = client.player;
 
         if (!sprintEnabled) {
@@ -75,13 +130,61 @@ final class SprintHud {
             text = textOn;
             color = config.colorOn;
         } else {
-            SprintBlocker reason = SprintBlocker.blocking(player);
-            if (reason == null) {
+            Optional<SprintBlocker> reason = SprintBlocker.blocking(player);
+            if (reason.isPresent()) {
+                text = blockedText.get(reason.get());
+                color = config.colorBlocked;
+            } else {
                 text = textOn;
                 color = config.colorOn;
-            } else {
-                text = blockedText.get(reason);
-                color = config.colorBlocked;
+            }
+        }
+    }
+
+    private Component settlingLabel(Minecraft client) {
+        if (client.player == null) {
+            return textJoining;
+        }
+        if (client.gui.screen() instanceof LevelLoadingScreen || client.gui.screen() instanceof ProgressScreen) {
+            return textTerrain; // vanilla is still swapping the world
+        }
+        ClientLevel level = client.level;
+        if (level != null) {
+            BlockPos pos = client.player.blockPosition();
+            if (!level.hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
+                return textTerrain;
+            }
+        }
+        return null;
+    }
+
+    boolean isSettling() {
+        return settleTicks > 0;
+    }
+
+    void drawAtConfigured(GuiGraphicsExtractor graphics) {
+        if (renderBroken) {
+            return;
+        }
+        try {
+            var font = Minecraft.getInstance().font;
+            int boxWidth = fixedTextWidth() + BACKGROUND_PADDING * 2;
+            int boxHeight = font.lineHeight + BACKGROUND_PADDING * 2;
+            int boxX = config.hudX == SprintConfig.AUTO_POSITION
+                    ? (graphics.guiWidth() - boxWidth) / 2
+                    : config.hudX - BACKGROUND_PADDING;
+            boxX = clampToScreen(boxX, graphics.guiWidth(), boxWidth);
+            int boxY = config.hudY == SprintConfig.AUTO_POSITION
+                    ? (graphics.guiHeight() - boxHeight) / 2
+                    : config.hudY - BACKGROUND_PADDING;
+            boxY = clampToScreen(boxY, graphics.guiHeight(), boxHeight);
+            drawAt(graphics, boxX + BACKGROUND_PADDING, boxY + BACKGROUND_PADDING);
+        } catch (Throwable t) {
+            renderBroken = true;
+            LOGGER.warn("HUD rendering failed once; disabling it for this session.", t);
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.sendSystemMessage(Component.translatable("message.mitrasautosprinter.hud_failed"));
             }
         }
     }
@@ -95,6 +198,8 @@ final class SprintHud {
         if (fixedWidth == null || now - widthCheckedAt >= WIDTH_RECHECK_NANOS) {
             var font = Minecraft.getInstance().font;
             int w = Math.max(font.width(textOn), font.width(textOff));
+            w = Math.max(w, font.width(textJoining));
+            w = Math.max(w, font.width(textTerrain));
             for (Component component : blockedText.values()) {
                 w = Math.max(w, font.width(component));
             }
@@ -126,24 +231,7 @@ final class SprintHud {
         if (!config.hudVisible || editorIsOpen() || renderBroken) {
             return;
         }
-
-        try {
-            var font = Minecraft.getInstance().font;
-            int boxWidth = fixedTextWidth() + BACKGROUND_PADDING * 2;
-            int boxHeight = font.lineHeight + BACKGROUND_PADDING * 2;
-            int boxX = config.hudX == SprintConfig.X_CENTER ? (graphics.guiWidth() - boxWidth) / 2 : config.hudX - BACKGROUND_PADDING;
-            boxX = clampToScreen(boxX, graphics.guiWidth(), boxWidth);
-            int boxY = config.hudY - BACKGROUND_PADDING;
-            boxY = clampToScreen(boxY, graphics.guiHeight(), boxHeight);
-            drawAt(graphics, boxX + BACKGROUND_PADDING, boxY + BACKGROUND_PADDING);
-        } catch (Throwable t) {
-            renderBroken = true;
-            LOGGER.warn("HUD rendering failed once; disabling it for this session.", t);
-            LocalPlayer player = Minecraft.getInstance().player;
-            if (player != null) {
-                player.sendSystemMessage(Component.translatable("message.mitrasautosprinter.hud_failed"));
-            }
-        }
+        drawAtConfigured(graphics);
     }
 
     private static boolean editorIsOpen() {
