@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 25 (Zulu)
         uses: actions/setup-java@0781fc6af30d3e1f67f2d243034e1a15cf5f3677
@@ -64,6 +66,74 @@ jobs:
           name: Mitra's-Auto-Sprinter-${{ steps.sha.outputs.short_sha }}-master
           path: build/libs/
 
+      - name: Generate release notes
+        if: steps.meta.outputs.releaseDevBuilds == 'true'
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          REPO="${{ github.repository }}"
+          SHA="${{ github.sha }}"
+          SHORT_SHA="${{ steps.sha.outputs.short_sha }}"
+          BRANCH="${{ github.ref_name }}"
+          RUN_ID="${{ github.run_id }}"
+          RUN_NUMBER="${{ github.run_number }}"
+          BUILT_AT="$(date -u +'%Y-%m-%d %H:%M UTC')"
+
+          PREV_SHA="$(git rev-list -n 1 refs/tags/nightly 2>/dev/null || true)"
+          if [ -z "$PREV_SHA" ]; then
+            PREV_SHA="$(git rev-list --max-parents=0 "$SHA")"
+          fi
+
+          CHANGES="$(git log "${PREV_SHA}..${SHA}" --pretty=format:'* %s (`%h`)' --no-merges | head -n 20)"
+          if [ -z "$CHANGES" ]; then
+            CHANGES="* No changes since last nightly"
+          fi
+
+          HASHES=""
+          for f in build/libs/*.jar; do
+            name="$(basename "$f")"
+            hash="$(sha256sum "$f" | awk '{print $1}')"
+            HASHES="${HASHES}* \`${name}\` : \`${hash}\`\n"
+          done
+
+          FABRIC_LOADER="$(grep -oP '(?<=^loader_version=)\S+' gradle.properties || echo 'unknown')"
+          FABRIC_API="$(grep -oP '(?<=^fabric_api_version=)\S+' gradle.properties || echo 'unknown')"
+          FZZY_CONFIG="$(grep -oP '(?<=^fzzy_config_version=)\S+' gradle.properties || echo 'unknown')"
+          LOOM_VERSION="$(grep -oP '(?<=^loom_version=)\S+' gradle.properties || echo 'unknown')"
+
+          JAVA_VER="25 (Zulu)"
+
+          {
+            echo "**Automated Nightly Build**"
+            echo "* **Minecraft Version:** \`${{ steps.meta.outputs.minecraft_version }}\`"
+            echo "* **Base Version:** \`${{ steps.meta.outputs.version }}\`"
+            echo "* **Build Number:** #${RUN_NUMBER}"
+            echo "* **Branch:** [\`${BRANCH}\`](https://github.com/${REPO}/tree/${SHA})"
+            echo "* **Commit:** [\`${SHORT_SHA}\`](https://github.com/${REPO}/commit/${SHA})"
+            echo "* **Built on:** ${BUILT_AT}"
+            echo "* **Java Runtime:** Java ${JAVA_VER}"
+            echo "* **CI Pipeline Run:** [#${RUN_NUMBER}](https://github.com/${REPO}/actions/runs/${RUN_ID})"
+            echo "* **Compare Changes:** [View Full Git Diff](https://github.com/${REPO}/compare/${PREV_SHA}...${SHA})"
+            echo ""
+            echo "## 📋 Technical Requirements"
+            echo "* **Fabric Loader:** >=${FABRIC_LOADER}"
+            echo "* **Fabric API:** >=${FABRIC_API}"
+            echo "* **Fzzy Config:** >=${FZZY_CONFIG}"
+            echo "* **Loom (build tooling):** ${LOOM_VERSION}"
+            echo ""
+            echo "### Recent Changes"
+            echo -e "$CHANGES"
+            echo ""
+            echo "## 🔐 File Hashes (SHA-256)"
+            echo -e "$HASHES"
+            echo "> [!CAUTION]"
+            echo "> This build is automatically generated and unreleased. Features may be incomplete, unstable, or potentially breaking. Backup your configs before testing."
+          } > release_notes.md
+
+          cat release_notes.md
+
       - name: Update nightly pre-release
         if: steps.meta.outputs.releaseDevBuilds == 'true'
         env:
@@ -77,5 +147,5 @@ jobs:
           gh release create "$TAG" build/libs/*.jar \
             --prerelease \
             --title "Nightly (mc${{ steps.meta.outputs.minecraft_version }}, build #${{ github.run_number }})" \
-            --notes "Automated nightly build from commit ${{ steps.sha.outputs.short_sha }} on \`${{ github.ref_name }}\`. Version base: ${{ steps.meta.outputs.version }}. May be unstable." \
+            --notes-file release_notes.md \
             --target "${{ github.sha }}"
