@@ -22,6 +22,8 @@ public final class MitrasConfig extends Config {
     public static final double MIN_ICON_SCALE = 0.25;
     public static final double MAX_ICON_SCALE = 8.0;
 
+    public static Runnable hudEditorAction = () -> {};
+
     public SprintSection sprint = new SprintSection();
     public HudSection hud = new HudSection();
     public TextSection text = new TextSection();
@@ -68,11 +70,10 @@ public final class MitrasConfig extends Config {
         public ValidatedCondition<Integer> hudY = new ValidatedCondition<>(hudYField, () -> hudYField.get())
                 .withCondition(REQUIRES_CUSTOM_ANCHOR, () -> hudAnchor.get() == HudAnchor.CUSTOM);
 
-        public Runnable openHudEditorAction = () -> {};
         public ConfigAction openHudEditorButton = new ConfigAction.Builder()
                 .title(Component.translatable("key.mitrasautosprinter.hud_editor"))
                 .desc(Component.translatable("mitrasautosprinter.mitrasautosprinter.hud.openHudEditor.desc"))
-                .build(() -> openHudEditorAction.run());
+                .build(() -> MitrasConfig.hudEditorAction.run());
 
         public ValidatedCondition<ValidatedColor.ColorHolder> colorOn = new ValidatedCondition<>(colorOnField, () -> colorOnField.get())
                 .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);

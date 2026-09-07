@@ -45,7 +45,7 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
         SprintHud hud = new SprintHud(config);
         AutoSprint sprint = new AutoSprint(config, hud);
 
-        config.hud.openHudEditorAction = () -> Minecraft.getInstance().gui.setScreen(new HudEditorScreen(config, hud));
+        MitrasConfig.hudEditorAction = () -> Minecraft.getInstance().gui.setScreen(new HudEditorScreen(config, hud));
 
         ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((_, _) -> hud.settleFor());
         ClientPlayConnectionEvents.JOIN.register((_, _, _) -> hud.settleFor());
