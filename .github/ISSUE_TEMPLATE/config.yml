@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: questions, or something too small for an issue?
+  - name: Questions, or something too small for an issue?
     url: https://github.com/Mitra-88/mitras-auto-sprinter/issues/new
-    about: not sure if it's a bug open an issue (check existing issues first in case it's already been asked/answered.).
+    about: Not sure if it's a bug? Open an issue anyway (but please check existing ones first in case it's already been asked/answered).

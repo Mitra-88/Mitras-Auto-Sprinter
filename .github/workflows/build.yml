@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -51,6 +51,18 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew build
+
+      - name: Create dev pre-release
+        if: steps.meta.outputs.release_dev_builds == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="v${{ steps.meta.outputs.version }}-mc${{ steps.meta.outputs.mc }}-dev.${{ github.run_number }}"
+          gh release create "$TAG" build/libs/*.jar \
+            --prerelease \
+            --title "Mitra's Auto Sprinter ${{ steps.meta.outputs.version }}-mc${{ steps.meta.outputs.mc }} (dev build #${{ github.run_number }})" \
+            --notes "Automated dev build from commit ${{ steps.sha.outputs.short_sha }}. may be unstable"
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

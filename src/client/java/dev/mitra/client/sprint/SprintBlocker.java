@@ -9,38 +9,26 @@ import java.util.function.Predicate;
 
 public enum SprintBlocker {
 
-    DEAD("reasonDead", "Dead", SprintBlocker::isDeadOrGone),
-    SPECTATOR("reasonSpectator", "Spectating", LocalPlayer::isSpectator),
-    NOT_MOVING("reasonStanding", "Not Moving", SprintBlocker::isStandingStill),
-    BLINDNESS("reasonBlind", "Blindness", LocalPlayer::isMobilityRestricted),
-    IN_VEHICLE("reasonVehicle", "In Vehicle", SprintBlocker::ridesNonSprintingVehicle),
-    TOO_HUNGRY("reasonHungry", "Too Hungry", SprintBlocker::lacksSprintFood),
-    SHALLOW_WATER("reasonShallowWater", "Shallow Water", SprintBlocker::isStuckInShallowWater),
-    USING_ITEM("reasonUsingItem", "Using Item", SprintBlocker::isSlowedByItemUse),
-    ELYTRA("reasonElytra", "Flying", SprintBlocker::isGliding),
-    SNEAKING("reasonSneaking", "Sneaking", SprintBlocker::isSneaking),
-    CRAWLING("reasonSlow", "Crawling", SprintBlocker::isCrawling),
-    HIT_WALL("reasonWall", "Hit Wall", player -> player.horizontalCollision),
-    RIDING("reasonRiding", "Riding", LocalPlayer::isPassenger);
+    DEAD(SprintBlocker::isDeadOrGone),
+    SPECTATOR(LocalPlayer::isSpectator),
+    NOT_MOVING(SprintBlocker::isStandingStill),
+    BLINDNESS(LocalPlayer::isMobilityRestricted),
+    IN_VEHICLE(SprintBlocker::ridesNonSprintingVehicle),
+    TOO_HUNGRY(SprintBlocker::lacksSprintFood),
+    SHALLOW_WATER(SprintBlocker::isStuckInShallowWater),
+    USING_ITEM(SprintBlocker::isSlowedByItemUse),
+    ELYTRA(SprintBlocker::isGliding),
+    SNEAKING(SprintBlocker::isSneaking),
+    CRAWLING(SprintBlocker::isCrawling),
+    HIT_WALL(player -> player.horizontalCollision),
+    RIDING(LocalPlayer::isPassenger);
 
-    private final String key;
-    private final String defaultText;
     private final Predicate<LocalPlayer> blocks;
 
     private static final SprintBlocker[] VALUES = values();
 
-    SprintBlocker(String key, String defaultText, Predicate<LocalPlayer> blocks) {
-        this.key = key;
-        this.defaultText = defaultText;
+    SprintBlocker(Predicate<LocalPlayer> blocks) {
         this.blocks = blocks;
-    }
-
-    public String key() {
-        return key;
-    }
-
-    public String defaultText() {
-        return defaultText;
     }
 
     public static SprintBlocker blocking(LocalPlayer player) {

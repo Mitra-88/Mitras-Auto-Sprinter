@@ -1,45 +1,45 @@
 name: ✨ Feature request
-description: got an idea? tell me what you'd want the mod to do
+description: Got an idea? Tell me what you'd like the mod to do.
 title: "[Feature] "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        ideas are always welcome, plenty of stuff in this mod started from just messing around with it and thinking "this could work better." small heads up tho: this is a tiny client-side auto sprint mod made by one guy, so ideas like "track my skyblock coins" probably won't happen, but "make the hud do X" absolutely might.
+        Ideas are always welcome plenty of stuff in this mod started from just playing around and thinking "this could work better".
+        This is a tiny client‑side auto‑sprint mod made by one person. Huge ideas probably won't happen.
 
   - type: textarea
     id: idea
     attributes:
-      label: what's your idea?
-      description: a sentence or two, like you'd explain it to a friend in the discord call.
-      placeholder: show the sprint state as a small icon instead of text.
+      label: What's your idea?
+      description: A sentence or two, like you'd explain it to a friend.
+      placeholder: Show the sprint state as a small icon instead of text.
     validations:
       required: true
 
   - type: textarea
     id: why
     attributes:
-      label: why do you want it?
-      description: what would it make easier? "it'd be cool" is honestly a valid reason too, but a real use case hits different.
+      label: Why do you want it?
+      description: What would it make easier? "It'd be cool" is a valid reason too, but a real use case helps me prioritise.
     validations:
       required: true
 
   - type: textarea
     id: how
     attributes:
-      label: how should it work?
+      label: How should it work?
       description: |
-        if you have something in mind: what does the hud show, what keybinds, what goes in the config?
-        no idea? no stress - figuring that out is half the fun.
-      placeholder: press H to hide the hud. it should remember between restarts.
+        The details, if you have them: keybinds, config options, exact HUD wording/placement.
+      placeholder: A keybind (default H) to toggle it, saved in the config so it persists between restarts.
 
   - type: checkboxes
     id: checklist
     attributes:
-      label: quick checklist
+      label: Quick checklist
       options:
-        - label: i checked the existing (and closed) issues and this isn't already suggested
+        - label: I checked the existing (and closed) issues and this isn't already suggested.
           required: true
-        - label: this is about the mod, not a vanilla minecraft thing
+        - label: This is about the mod, not a vanilla Minecraft thing.
           required: true

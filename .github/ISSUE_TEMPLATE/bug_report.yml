@@ -1,58 +1,57 @@
 name: 🐞 Bug report
-description: something broke, looks wrong, or the hud is acting up
+description: Something broke, looks wrong, or the HUD is acting up.
 title: "[Bug] "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        thanks for taking the time to report this
-
-        real quick before you start - vanilla minecraft is weird about sprinting. a classic one: sneaking while you're *already* sprinting keeps the sprint going. that's the game, not the mod (still true as of 26.2).
+        Thanks for taking the time to report this.
+        Quick note: Vanilla Minecraft has a few sprinting quirks. For example, if you start sneaking while already sprinting, you keep sprinting that's the game, not the mod (still true as of 26.2).
 
   - type: textarea
     id: what-happened
     attributes:
-      label: what happened?
+      label: What happened?
       description: |
-        what did you see, and what did you expect instead.
-        screenshots or a short clip help a ton just drag & drop them right into this box.
+        What did you see, and what did you expect instead?
+        Screenshots or a short video clip are super helpful just drag & drop them right into this box.
       placeholder: |
-        the hud said "Sprint OFF - Too Hungry" but my hunger bar was full.
-        should've said Sprint ON.
+        The HUD said "Sprint OFF - Too Hungry", but my hunger bar was full.
+        I expected it to say "Sprint ON".
     validations:
       required: true
 
   - type: dropdown
     id: where
     attributes:
-      label: where does this happen?
+      label: Where does this happen?
       options:
-        - singleplayer
-        - a server (multiplayer)
-        - both
+        - Singleplayer
+        - On a server (multiplayer)
+        - Both
     validations:
       required: true
 
   - type: dropdown
     id: vanilla
     attributes:
-      label: does the same thing happen without the mod?
-      description: if you can, test with the mod removed. this one answer saves me so much time.
+      label: Does the same thing happen without the mod?
+      description: If you can, test with the mod removed – it saves me a lot of time.
       options:
-        - "no, only with the mod"
-        - "yes, vanilla does it too"
-        - didn't check
+        - "No, only with the mod"
+        - "Yes, vanilla does it too"
+        - Didn't check
     validations:
       required: true
 
   - type: textarea
     id: versions
     attributes:
-      label: versions
-      description: all four pls. the mod version is in the jar filename in your mods folder.
+      label: Versions
+      description: Please provide all four – the mod version is in the .jar filename in your `mods` folder.
       placeholder: |
-        Mitra's Auto Sprinter: 1.5.0
+        Mitra's Auto Sprinter: 1.6.0
         Minecraft: 26.2
         Fabric Loader: 0.19.3
         Fabric API: 0.159.0+26.2
@@ -62,28 +61,34 @@ body:
   - type: textarea
     id: mods
     attributes:
-      label: other mods installed?
-      description: list them if you can movement, sprint and hud mods are extra interesting. "just this one" is a totally valid answer.
+      label: Installed Mod(s) & Version(s)?
+      description: |
+        List them if you can. Movement, sprint, and HUD mods are especially interesting.
+      placeholder: |
+        sodium-fabric-0.9.2-beta.1+mc26.2.jar
+        lithium-fabric-0.25.3+mc26.2.jar
+        entityculling-fabric-1.10.5-mc26.2.jar
+        ImmediatelyFast-Fabric-1.16.4+26.2.jar
 
   - type: textarea
     id: logs
     attributes:
-      label: log file
+      label: Log file
       description: |
-        upload `logs/latest.log` to https://mclo.gs/ and paste the link here especially if something crashed or the hud vanished.
-        if the config might be involved, paste `config/mitrasautosprinter.properties` too (heads up: it hot-reloads, so don't edit it mid-test unless you mean to).
+        Upload your log file to https://mclo.gs/ and paste the link here.
+        This is extra useful if something crashed or the HUD disappeared.
 
   - type: textarea
     id: steps
     attributes:
-      label: how do i see this happen?
+      label: Steps to reproduce
       description: |
-        exact steps are gold. "press K, walk forward, sneak, jump" beats "it happens sometimes" every time.
-        and tell me if it's every time or just sometimes.
+        Exact steps are gold – "press K, walk forward, sneak, jump" is much better than "it happens sometimes".
+        Also tell me if it happens every time or just occasionally.
+        A screenshot or short clip helps a LOT more than words alone just please, not 144p 🙏😭 (upload it somewhere and send it here)
       placeholder: |
-        1. press K to turn the mod on
-        2. walk forward
-        3. open the hud editor
-        4. ...
+        1. Press K to turn the mod on.
+        2. Walk forward into shallow water.
+        3. HUD shows the wrong state (happens every time).
     validations:
       required: true

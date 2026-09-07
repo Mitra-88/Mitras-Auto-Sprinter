@@ -1,7 +1,7 @@
 package dev.mitra.client.hud;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import dev.mitra.client.config.SprintConfig;
+import dev.mitra.client.config.MitrasConfig;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -10,10 +10,10 @@ import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 
-import static dev.mitra.client.config.SprintConfig.AUTO_POSITION;
-import static dev.mitra.client.config.SprintConfig.DEFAULT_HUD_Y;
-import static dev.mitra.client.config.SprintConfig.MAX_ICON_SCALE;
-import static dev.mitra.client.config.SprintConfig.MIN_ICON_SCALE;
+import dev.mitra.client.config.HudAnchor;
+
+import static dev.mitra.client.config.MitrasConfig.MAX_ICON_SCALE;
+import static dev.mitra.client.config.MitrasConfig.MIN_ICON_SCALE;
 
 public final class HudEditorScreen extends Screen {
 
@@ -27,7 +27,7 @@ public final class HudEditorScreen extends Screen {
     private static final int BORDER_COLOR = 0xFFFFFFFF;
     private static final int BORDER_COLOR_DRAGGING = 0xFF00FF00;
 
-    private final SprintConfig config;
+    private final MitrasConfig config;
     private final SprintHud hud;
 
     private boolean dragging;
@@ -38,24 +38,19 @@ public final class HudEditorScreen extends Screen {
     private int hudX;
     private int hudY;
 
-    public HudEditorScreen(SprintConfig config, SprintHud hud) {
+    public HudEditorScreen(MitrasConfig config, SprintHud hud) {
         super(Component.translatable("hud.mitrasautosprinter.editor.title"));
         this.config = config;
         this.hud = hud;
-        this.hudX = config.hudX;
-        this.hudY = config.hudY;
+        this.hudX = config.hud.hudX.get();
+        this.hudY = config.hud.hudY.get();
     }
 
     @Override
     protected void init() {
-        if (hudX == AUTO_POSITION) {
-            int boxWidth = hud.elementWidth() + BORDER_PADDING * 2;
-            hudX = (width - boxWidth) / 2 + BORDER_PADDING;
-        }
-        if (hudY == AUTO_POSITION) {
-            int boxHeight = hud.elementHeight() + BORDER_PADDING * 2;
-            hudY = (height - boxHeight) / 2 + BORDER_PADDING;
-        }
+        SprintHud.ElementBox box = hud.resolvedBox(width, height);
+        hudX = box.x() + BORDER_PADDING;
+        hudY = box.y() + BORDER_PADDING;
         keepOnScreen();
     }
 
@@ -121,19 +116,18 @@ public final class HudEditorScreen extends Screen {
     }
 
     private void changeScale(double delta) {
-        double scale = Math.round((config.hudIconScale + delta) * 10.0) / 10.0;
-        config.hudIconScale = Math.clamp(scale, MIN_ICON_SCALE, MAX_ICON_SCALE);
+        double scale = Math.round((config.hud.hudIconScale.get() + delta) * 10.0) / 10.0;
+        config.hud.hudIconScale.accept(Math.clamp(scale, MIN_ICON_SCALE, MAX_ICON_SCALE));
         scaleChanged = true;
         keepOnScreen();
     }
 
     private void resetToDefaultPosition() {
-        config.hudX = AUTO_POSITION;
-        config.hudY = DEFAULT_HUD_Y;
+        config.hud.hudAnchor.accept(HudAnchor.AUTO_CENTER_TOP);
         config.save();
-        int boxWidth = hud.elementWidth() + BORDER_PADDING * 2;
-        hudX = (width - boxWidth) / 2 + BORDER_PADDING;
-        hudY = DEFAULT_HUD_Y;
+        SprintHud.ElementBox box = hud.resolvedBox(width, height);
+        hudX = box.x() + BORDER_PADDING;
+        hudY = box.y() + BORDER_PADDING;
         moved = false;
     }
 
@@ -149,8 +143,9 @@ public final class HudEditorScreen extends Screen {
     public void removed() {
         super.removed();
         if (moved) {
-            config.hudX = hudX;
-            config.hudY = hudY;
+            config.hud.hudAnchor.accept(HudAnchor.CUSTOM);
+            config.hud.hudX.accept(hudX);
+            config.hud.hudY.accept(hudY);
         }
         if (moved || scaleChanged) {
             config.save();
