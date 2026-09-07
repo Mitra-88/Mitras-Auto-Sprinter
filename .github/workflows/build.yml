@@ -44,6 +44,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Read metadata
+        id: meta
+        run: |
+          grep -E '^(version|minecraft_version|releaseDevBuilds)=' gradle.properties >> "$GITHUB_OUTPUT"
+        shell: bash
+
       - name: Get short SHA
         id: sha
         run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
@@ -52,20 +58,24 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
-      - name: Create dev pre-release
-        if: steps.meta.outputs.release_dev_builds == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          TAG="v${{ steps.meta.outputs.version }}-mc${{ steps.meta.outputs.mc }}-dev.${{ github.run_number }}"
-          gh release create "$TAG" build/libs/*.jar \
-            --prerelease \
-            --title "Mitra's Auto Sprinter ${{ steps.meta.outputs.version }}-mc${{ steps.meta.outputs.mc }} (dev build #${{ github.run_number }})" \
-            --notes "Automated dev build from commit ${{ steps.sha.outputs.short_sha }}. may be unstable"
-
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: Mitra's-Auto-Sprinter-${{ steps.sha.outputs.short_sha }}-master
           path: build/libs/
+
+      - name: Update nightly pre-release
+        if: steps.meta.outputs.releaseDevBuilds == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="nightly"
+
+          gh release delete "$TAG" --yes --cleanup-tag || true
+
+          gh release create "$TAG" build/libs/*.jar \
+            --prerelease \
+            --title "Nightly (mc${{ steps.meta.outputs.minecraft_version }}, build #${{ github.run_number }})" \
+            --notes "Automated nightly build from commit ${{ steps.sha.outputs.short_sha }} on \`${{ github.ref_name }}\`. Version base: ${{ steps.meta.outputs.version }}. May be unstable." \
+            --target "${{ github.sha }}"
