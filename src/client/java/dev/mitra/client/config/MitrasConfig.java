@@ -10,7 +10,6 @@ import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedCondition;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedDouble;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedEnum;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
-import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedInt;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedNumber;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -18,7 +17,6 @@ import net.minecraft.resources.Identifier;
 public final class MitrasConfig extends Config {
 
     private static final String MOD_ID = "mitrasautosprinter";
-    private static final int MAX_POSITION = 10_000;
     public static final double MIN_ICON_SCALE = 0.25;
     public static final double MAX_ICON_SCALE = 8.0;
 
@@ -49,13 +47,16 @@ public final class MitrasConfig extends Config {
                 Component.translatable("mitrasautosprinter.config.condition.icon_mode");
         private static final Component REQUIRES_CUSTOM_ANCHOR =
                 Component.translatable("mitrasautosprinter.config.condition.custom_anchor");
+        private static final Component REQUIRES_SOLID_COLOR =
+                Component.translatable("mitrasautosprinter.config.condition.solid_color");
 
         private final ValidatedColor colorOnField = new ValidatedColor(0x55, 0xFF, 0x55, 0xFF).withFormattingColorPresets();
         private final ValidatedColor colorOffField = new ValidatedColor(0xAA, 0xAA, 0xAA, 0xFF).withFormattingColorPresets();
         private final ValidatedColor colorBlockedField = new ValidatedColor(0xFF, 0xFF, 0x55, 0xFF).withFormattingColorPresets();
         private final ValidatedDouble iconScaleField = new ValidatedDouble(1.0, MAX_ICON_SCALE, MIN_ICON_SCALE, ValidatedNumber.WidgetType.SLIDER);
-        private final ValidatedInt hudXField = new ValidatedInt(6, MAX_POSITION, 0, ValidatedNumber.WidgetType.TEXTBOX);
-        private final ValidatedInt hudYField = new ValidatedInt(6, MAX_POSITION, 0, ValidatedNumber.WidgetType.TEXTBOX);
+        private final ValidatedDouble hudXField = new ValidatedDouble(0.01, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
+        private final ValidatedDouble hudYField = new ValidatedDouble(0.01, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
+        private final ValidatedEnum<TextColorMode> textColorModeEnum = new ValidatedEnum<>(TextColorMode.SOLID, ValidatedEnum.WidgetType.CYCLING);
 
         public boolean hudVisible = true;
         public boolean hudBackground = false;
@@ -63,26 +64,44 @@ public final class MitrasConfig extends Config {
         public ValidatedEnum<HudShowMode> showMode = new ValidatedEnum<>(HudShowMode.ALWAYS, ValidatedEnum.WidgetType.CYCLING);
         public ValidatedEnum<HudAnchor> hudAnchor = new ValidatedEnum<>(HudAnchor.AUTO_CENTER_TOP, ValidatedEnum.WidgetType.SCROLLABLE);
         public boolean hudTextShadow = true;
-        public ValidatedCondition<Double> hudIconScale = new ValidatedCondition<>(iconScaleField, () -> iconScaleField.get())
+        public ValidatedCondition<Double> hudIconScale = new ValidatedCondition<>(
+                iconScaleField,
+                new ValidatedDouble(1.0, MAX_ICON_SCALE, MIN_ICON_SCALE, ValidatedNumber.WidgetType.SLIDER))
                 .withCondition(REQUIRES_ICON_MODE, () -> displayMode.get() == DisplayMode.ICON);
-        public ValidatedCondition<Integer> hudX = new ValidatedCondition<>(hudXField, () -> hudXField.get())
+        public ValidatedCondition<Double> hudX = new ValidatedCondition<>(
+                hudXField,
+                new ValidatedDouble(0.01, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX))
                 .withCondition(REQUIRES_CUSTOM_ANCHOR, () -> hudAnchor.get() == HudAnchor.CUSTOM);
-        public ValidatedCondition<Integer> hudY = new ValidatedCondition<>(hudYField, () -> hudYField.get())
+        public ValidatedCondition<Double> hudY = new ValidatedCondition<>(
+                hudYField,
+                new ValidatedDouble(0.01, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX))
                 .withCondition(REQUIRES_CUSTOM_ANCHOR, () -> hudAnchor.get() == HudAnchor.CUSTOM);
+        public ValidatedCondition<TextColorMode> textColorMode = new ValidatedCondition<>(
+                textColorModeEnum,
+                new ValidatedEnum<>(TextColorMode.SOLID, ValidatedEnum.WidgetType.CYCLING))
+                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
+        public ValidatedCondition<ValidatedColor.ColorHolder> colorOn = new ValidatedCondition<>(
+                colorOnField,
+                new ValidatedColor(0x55, 0xFF, 0x55, 0xFF).withFormattingColorPresets())
+                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT)
+                .withCondition(REQUIRES_SOLID_COLOR, () -> textColorMode.get() == TextColorMode.SOLID);
+        public ValidatedCondition<ValidatedColor.ColorHolder> colorOff = new ValidatedCondition<>(
+                colorOffField,
+                new ValidatedColor(0xAA, 0xAA, 0xAA, 0xFF).withFormattingColorPresets())
+                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT)
+                .withCondition(REQUIRES_SOLID_COLOR, () -> textColorMode.get() == TextColorMode.SOLID);
+        public ValidatedCondition<ValidatedColor.ColorHolder> colorBlocked = new ValidatedCondition<>(
+                colorBlockedField,
+                new ValidatedColor(0xFF, 0xFF, 0x55, 0xFF).withFormattingColorPresets())
+                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT)
+                .withCondition(REQUIRES_SOLID_COLOR, () -> textColorMode.get() == TextColorMode.SOLID);
 
         public ConfigAction openHudEditorButton = new ConfigAction.Builder()
                 .title(Component.translatable("key.mitrasautosprinter.hud_editor"))
                 .desc(Component.translatable("mitrasautosprinter.mitrasautosprinter.hud.openHudEditor.desc"))
                 .build(() -> MitrasConfig.hudEditorAction.run());
 
-        public ValidatedCondition<ValidatedColor.ColorHolder> colorOn = new ValidatedCondition<>(colorOnField, () -> colorOnField.get())
-                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
-        public ValidatedCondition<ValidatedColor.ColorHolder> colorOff = new ValidatedCondition<>(colorOffField, () -> colorOffField.get())
-                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
-        public ValidatedCondition<ValidatedColor.ColorHolder> colorBlocked = new ValidatedCondition<>(colorBlockedField, () -> colorBlockedField.get())
-                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
         public ValidatedColor backgroundColor = new ValidatedColor(0x00, 0x00, 0x00, 0x66).withDyeColorPresets();
-
     }
 
     public static class TextSection extends ConfigSection {
@@ -94,10 +113,8 @@ public final class MitrasConfig extends Config {
     }
 
     public static class ReasonSection extends ConfigSection {
-        public ValidatedString reasonDead = new ValidatedString("Dead");
-        public ValidatedString reasonSpectator = new ValidatedString("Spectating");
         public ValidatedString reasonStanding = new ValidatedString("Not Moving");
-        public ValidatedString reasonBlind = new ValidatedString("Blindness");
+        public ValidatedString reasonRestricted = new ValidatedString("Restricted");
         public ValidatedString reasonVehicle = new ValidatedString("In Vehicle");
         public ValidatedString reasonHungry = new ValidatedString("Too Hungry");
         public ValidatedString reasonShallowWater = new ValidatedString("Shallow Water");
@@ -106,6 +123,5 @@ public final class MitrasConfig extends Config {
         public ValidatedString reasonSneaking = new ValidatedString("Sneaking");
         public ValidatedString reasonSlow = new ValidatedString("Crawling");
         public ValidatedString reasonWall = new ValidatedString("Hit Wall");
-        public ValidatedString reasonRiding = new ValidatedString("Riding");
     }
 }

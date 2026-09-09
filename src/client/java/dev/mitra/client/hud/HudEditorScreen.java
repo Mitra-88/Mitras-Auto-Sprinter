@@ -42,8 +42,7 @@ public final class HudEditorScreen extends Screen {
         super(Component.translatable("hud.mitrasautosprinter.editor.title"));
         this.config = config;
         this.hud = hud;
-        this.hudX = config.hud.hudX.get();
-        this.hudY = config.hud.hudY.get();
+        hud.resetRenderFailure();
     }
 
     @Override
@@ -144,8 +143,8 @@ public final class HudEditorScreen extends Screen {
         super.removed();
         if (moved) {
             config.hud.hudAnchor.accept(HudAnchor.CUSTOM);
-            config.hud.hudX.accept(hudX);
-            config.hud.hudY.accept(hudY);
+            config.hud.hudX.accept(SprintHud.normalizeCoordinate(hudX, width, hud.elementWidth()));
+            config.hud.hudY.accept(SprintHud.normalizeCoordinate(hudY, height, hud.elementHeight()));
         }
         if (moved || scaleChanged) {
             config.save();

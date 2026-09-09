@@ -50,7 +50,7 @@ java {
 }
 
 jar {
-	archiveVersion = "${project.version}-mc${project.minecraft_version}"
+	archiveVersion = "${project.version}-fabric-mc${project.minecraft_version}"
 
 	def projectName = project.name
 	inputs.property "projectName", projectName

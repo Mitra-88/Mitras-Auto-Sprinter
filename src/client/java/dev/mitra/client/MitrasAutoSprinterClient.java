@@ -7,6 +7,7 @@ import dev.mitra.client.hud.SprintHud;
 import dev.mitra.client.sprint.AutoSprint;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -75,6 +76,9 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
 
         hud.attach();
 
-        LOGGER.info("Initialized. Toggle auto sprint with K (rebindable in Controls).");
+        ClientLifecycleEvents.CLIENT_STARTED.register(_ -> {
+            String keyName = TOGGLE_KEY.getTranslatedKeyMessage().getString();
+            LOGGER.info("GOLD! GOLD! GOLD! Mitra's Auto Sprinter is READY! Press {} to activate it.", keyName);
+        });
     }
 }

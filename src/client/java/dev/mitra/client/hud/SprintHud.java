@@ -3,22 +3,27 @@ package dev.mitra.client.hud;
 import dev.mitra.client.config.DisplayMode;
 import dev.mitra.client.config.HudAnchor;
 import dev.mitra.client.config.MitrasConfig;
+import dev.mitra.client.config.TextColorMode;
 import dev.mitra.client.sprint.SprintBlocker;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Hud;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
+import net.minecraft.util.Util;
 import net.minecraft.world.effect.MobEffects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +41,20 @@ public final class SprintHud {
     private static final int ON_CHANGE_TICKS = 60;
     private static final int AUTO_CENTER_TOP_Y = 33;
     private static final int BOTTOM_RESERVED_HUD_HEIGHT = 50;
+    private static final int HUE_STEPS = 360;
+    private static final long HUE_CYCLE_MS = 3000;
+    private static final int CHROMA_CHAR_SPREAD_DEGREES = 30;
+    private static final int GLYPH_CACHE_SIZE = 128;
+    private static final int[] HUE_LUT = new int[HUE_STEPS];
+    private static final String[] GLYPH_CACHE = new String[GLYPH_CACHE_SIZE];
+    private static final int[] GLYPH_WIDTH_CACHE = new int[GLYPH_CACHE_SIZE];
+    private static Font glyphCacheFont;
+
+    static {
+        for (int i = 0; i < HUE_STEPS; i++) {
+            HUE_LUT[i] = 0xFF000000 | Mth.hsvToRgb(i / (float) HUE_STEPS, 0.85f, 1.0f);
+        }
+    }
 
     private final MitrasConfig config;
     private final WorldChangeDetector worldChange = new WorldChangeDetector();
@@ -58,18 +77,16 @@ public final class SprintHud {
     private long widthCheckedAt;
 
     private boolean renderBroken;
-
     public SprintHud(MitrasConfig config) {
         this.config = config;
         rebuildLabels();
         for (me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString label : List.of(
                 config.text.textOn, config.text.textOff, config.text.textJoining,
                 config.text.textTerrain, config.text.textBlockedFormat,
-                config.reasons.reasonDead, config.reasons.reasonSpectator, config.reasons.reasonStanding,
-                config.reasons.reasonBlind, config.reasons.reasonVehicle, config.reasons.reasonHungry,
+                config.reasons.reasonStanding, config.reasons.reasonRestricted,
+                config.reasons.reasonVehicle, config.reasons.reasonHungry,
                 config.reasons.reasonShallowWater, config.reasons.reasonUsingItem, config.reasons.reasonElytra,
-                config.reasons.reasonSneaking, config.reasons.reasonSlow, config.reasons.reasonWall,
-                config.reasons.reasonRiding)) {
+                config.reasons.reasonSneaking, config.reasons.reasonSlow, config.reasons.reasonWall)) {
             label.listenToEntry(_ -> labelsDirty = true);
         }
 
@@ -87,6 +104,10 @@ public final class SprintHud {
 
     public void update(Minecraft client, boolean sprintEnabled) {
         worldChange.tick(client);
+
+        if (worldChange.consumeWorldChanged()) {
+            renderBroken = false;
+        }
 
         if (labelsDirty) {
             rebuildLabels();
@@ -121,10 +142,8 @@ public final class SprintHud {
         textJoining = Component.literal(config.text.textJoining.get());
         textTerrain = Component.literal(config.text.textTerrain.get());
         blockedText.clear();
-        blockedText.put(SprintBlocker.DEAD, Component.literal(config.reasons.reasonDead.get()));
-        blockedText.put(SprintBlocker.SPECTATOR, Component.literal(config.reasons.reasonSpectator.get()));
         blockedText.put(SprintBlocker.NOT_MOVING, Component.literal(config.reasons.reasonStanding.get()));
-        blockedText.put(SprintBlocker.BLINDNESS, Component.literal(config.reasons.reasonBlind.get()));
+        blockedText.put(SprintBlocker.RESTRICTED, Component.literal(config.reasons.reasonRestricted.get()));
         blockedText.put(SprintBlocker.IN_VEHICLE, Component.literal(config.reasons.reasonVehicle.get()));
         blockedText.put(SprintBlocker.TOO_HUNGRY, Component.literal(config.reasons.reasonHungry.get()));
         blockedText.put(SprintBlocker.SHALLOW_WATER, Component.literal(config.reasons.reasonShallowWater.get()));
@@ -133,8 +152,8 @@ public final class SprintHud {
         blockedText.put(SprintBlocker.SNEAKING, Component.literal(config.reasons.reasonSneaking.get()));
         blockedText.put(SprintBlocker.CRAWLING, Component.literal(config.reasons.reasonSlow.get()));
         blockedText.put(SprintBlocker.HIT_WALL, Component.literal(config.reasons.reasonWall.get()));
-        blockedText.put(SprintBlocker.RIDING, Component.literal(config.reasons.reasonRiding.get()));
         fixedTextWidthCache = null;
+        widthCheckedAt = 0;
     }
 
     private void updateSprintState(Minecraft client, boolean sprintEnabled) {
@@ -156,7 +175,7 @@ public final class SprintHud {
             color = onColor;
             blocked = false;
         } else {
-            SprintBlocker reason = SprintBlocker.blocking(player);
+            SprintBlocker reason = SprintBlocker.whyNotSprinting(player);
             if (reason != null) {
                 text = blockedText.get(reason);
                 color = blockedColor;
@@ -236,34 +255,105 @@ public final class SprintHud {
                     ARGB.white(alpha));
         } else {
             graphics.text(font, text, x + (fixedTextWidth() - font.width(text)) / 2, y, color, config.hud.hudTextShadow);
+            int textX = x + (fixedTextWidth() - font.width(text)) / 2;
+            TextColorMode colorMode = config.hud.textColorMode.get();
+            if (colorMode == TextColorMode.SOLID) {
+                graphics.text(font, text, textX, y, color, config.hud.hudTextShadow);
+            } else {
+                drawCyclingText(graphics, font, textX, y, colorMode == TextColorMode.CHROMA);
+            }
         }
+    }
+
+    private void drawCyclingText(GuiGraphicsExtractor graphics, Font font, int x, int y, boolean chroma) {
+        String string = text.getString();
+        int length = string.length();
+        if (length == 0) {
+            return;
+        }
+        int hueBase = (int) (Util.getMillis() % HUE_CYCLE_MS * HUE_STEPS / HUE_CYCLE_MS);
+        int charX = x;
+        for (int i = 0; i < length; i++) {
+            char c = string.charAt(i);
+            int width = glyphWidth(font, c);
+            if (c != ' ') {
+                int hue = chroma ? (hueBase + i * CHROMA_CHAR_SPREAD_DEGREES) % HUE_STEPS : hueBase;
+                graphics.text(font, glyph(c), charX, y, HUE_LUT[hue], config.hud.hudTextShadow);
+            }
+            charX += width;
+        }
+    }
+
+    private static String glyph(char c) {
+        if (c >= GLYPH_CACHE_SIZE) {
+            return String.valueOf(c);
+        }
+        String cached = GLYPH_CACHE[c];
+        if (cached == null) {
+            cached = String.valueOf(c);
+            GLYPH_CACHE[c] = cached;
+        }
+        return cached;
+    }
+
+    private static int glyphWidth(Font font, char c) {
+        if (c >= GLYPH_CACHE_SIZE) {
+            return font.width(glyph(c));
+        }
+        if (glyphCacheFont != font) {
+            Arrays.fill(GLYPH_WIDTH_CACHE, -1);
+            glyphCacheFont = font;
+        }
+        int cached = GLYPH_WIDTH_CACHE[c];
+        if (cached < 0) {
+            cached = font.width(glyph(c));
+            GLYPH_WIDTH_CACHE[c] = cached;
+        }
+        return cached;
     }
 
     static int clampToScreen(int position, int screenSize, int elementSize) {
         return Math.clamp(position, 0, Math.max(0, screenSize - elementSize));
     }
 
+
+    static double normalizeCoordinate(int position, int screenSize, int elementSize) {
+        int travel = Math.max(1, screenSize - elementSize);
+        return Math.clamp(position / (double) travel, 0.0, 1.0);
+    }
+
+    static int denormalizeCoordinate(double normalized, int screenSize, int elementSize) {
+        return (int) Math.round(normalized * Math.max(0, screenSize - elementSize));
+    }
+
     record ElementBox(int x, int y, int width, int height) {}
 
     ElementBox resolvedBox(int guiWidth, int guiHeight) {
-        int boxWidth = elementWidth() + BACKGROUND_PADDING * 2;
-        int boxHeight = elementHeight() + BACKGROUND_PADDING * 2;
+        int elementWidth = elementWidth();
+        int elementHeight = elementHeight();
+        int boxWidth = elementWidth + BACKGROUND_PADDING * 2;
+        int boxHeight = elementHeight + BACKGROUND_PADDING * 2;
         HudAnchor anchor = config.hud.hudAnchor.get();
         int x = switch (anchor) {
             case AUTO_CENTER_TOP, TOP_CENTER, BOTTOM_CENTER -> (guiWidth - boxWidth) / 2;
             case TOP_LEFT, BOTTOM_LEFT -> 0;
             case TOP_RIGHT, BOTTOM_RIGHT -> guiWidth - boxWidth;
-            case CUSTOM -> config.hud.hudX.get() - BACKGROUND_PADDING;
+
+            case CUSTOM -> denormalizeCoordinate(config.hud.hudX.get(), guiWidth, elementWidth) - BACKGROUND_PADDING;
         };
         int y = switch (anchor) {
             case AUTO_CENTER_TOP -> AUTO_CENTER_TOP_Y - BACKGROUND_PADDING;
             case TOP_LEFT, TOP_CENTER, TOP_RIGHT -> 0;
             case BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT -> guiHeight - BOTTOM_RESERVED_HUD_HEIGHT - boxHeight;
-            case CUSTOM -> config.hud.hudY.get() - BACKGROUND_PADDING;
+            case CUSTOM -> denormalizeCoordinate(config.hud.hudY.get(), guiHeight, elementHeight) - BACKGROUND_PADDING;
         };
         x = clampToScreen(x, guiWidth, boxWidth);
         y = clampToScreen(y, guiHeight, boxHeight);
         return new ElementBox(x, y, boxWidth, boxHeight);
+    }
+
+    public void resetRenderFailure() {
+        renderBroken = false;
     }
 
     public void drawAtConfiguredPosition(GuiGraphicsExtractor graphics) {
@@ -275,7 +365,7 @@ public final class SprintHud {
             drawAt(graphics, box.x() + BACKGROUND_PADDING, box.y() + BACKGROUND_PADDING);
         } catch (Throwable t) {
             renderBroken = true;
-            LOGGER.warn("HUD rendering failed once; disabling it for this session.", t);
+            LOGGER.warn("HUD rendering failed once; disabling it until the HUD editor is opened or the world is changed.", t);
             LocalPlayer player = Minecraft.getInstance().player;
             if (player != null) {
                 player.sendSystemMessage(Component.translatable("message.mitrasautosprinter.hud_failed"));

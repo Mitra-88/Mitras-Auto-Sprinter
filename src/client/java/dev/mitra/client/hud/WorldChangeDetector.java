@@ -21,6 +21,7 @@ public final class WorldChangeDetector {
     private int settleTicks;
     private LocalPlayer lastPlayer;
     private Vec3 lastPosition;
+    private boolean worldChanged;
 
     public void tick(Minecraft client) {
         detectWorldChange(client);
@@ -50,6 +51,12 @@ public final class WorldChangeDetector {
         settleTicks = SETTLE_MAX_TICKS;
     }
 
+    public boolean consumeWorldChanged() {
+        boolean changed = worldChanged;
+        worldChanged = false;
+        return changed;
+    }
+
     private void detectWorldChange(Minecraft client) {
         LocalPlayer player = client.player;
 
@@ -58,6 +65,7 @@ public final class WorldChangeDetector {
             lastPosition = player != null ? player.position() : null;
             if (player != null) {
                 arm();
+                worldChanged = true;
             }
         } else if (player != null) {
             Vec3 position = player.position();

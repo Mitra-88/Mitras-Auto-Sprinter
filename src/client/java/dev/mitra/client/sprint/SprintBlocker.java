@@ -9,10 +9,8 @@ import java.util.function.Predicate;
 
 public enum SprintBlocker {
 
-    DEAD(SprintBlocker::isDeadOrGone),
-    SPECTATOR(LocalPlayer::isSpectator),
     NOT_MOVING(SprintBlocker::isStandingStill),
-    BLINDNESS(LocalPlayer::isMobilityRestricted),
+    RESTRICTED(LocalPlayer::isMobilityRestricted),
     IN_VEHICLE(SprintBlocker::ridesNonSprintingVehicle),
     TOO_HUNGRY(SprintBlocker::lacksSprintFood),
     SHALLOW_WATER(SprintBlocker::isStuckInShallowWater),
@@ -20,28 +18,108 @@ public enum SprintBlocker {
     ELYTRA(SprintBlocker::isGliding),
     SNEAKING(SprintBlocker::isSneaking),
     CRAWLING(SprintBlocker::isCrawling),
-    HIT_WALL(player -> player.horizontalCollision),
-    RIDING(LocalPlayer::isPassenger);
+    HIT_WALL(SprintBlocker::hitWall, false);
 
     private final Predicate<LocalPlayer> blocks;
+    private final boolean startBlocker;
 
     private static final SprintBlocker[] VALUES = values();
 
     SprintBlocker(Predicate<LocalPlayer> blocks) {
+        this(blocks, true);
+    }
+
+    SprintBlocker(Predicate<LocalPlayer> blocks, boolean startBlocker) {
         this.blocks = blocks;
+        this.startBlocker = startBlocker;
     }
 
     public static SprintBlocker blocking(LocalPlayer player) {
         for (SprintBlocker reason : VALUES) {
-            if (reason.blocks.test(player)) {
+            if (reason.startBlocker && reason.blocks.test(player)) {
                 return reason;
             }
         }
         return null;
     }
 
-    private static boolean isDeadOrGone(LocalPlayer player) {
-        return !player.isAlive() || player.isRemoved();
+    public static boolean shouldStopSprinting(LocalPlayer player) {
+        return player.isSprinting()
+                && (player.isSwimming() ? shouldStopSwimSprinting(player) : shouldStopRunSprinting(player));
+    }
+
+    public static SprintBlocker stopReason(LocalPlayer player) {
+        if (player.isSwimming()) {
+            if (!isSprintingPossible(player, true)) {
+                return sprintingPossibleReason(player, true);
+            }
+            if (!player.isInWater()) {
+                return null;
+            }
+            if (!player.input.hasForwardImpulse() && !player.onGround() && !player.isShiftKeyDown()) {
+                return NOT_MOVING;
+            }
+            return null;
+        }
+        if (!isSprintingPossible(player, player.getAbilities().flying)) {
+            return sprintingPossibleReason(player, player.getAbilities().flying);
+        }
+        if (!player.input.hasForwardImpulse()) {
+            return NOT_MOVING;
+        }
+        if (HIT_WALL.blocks.test(player)) {
+            return HIT_WALL;
+        }
+        return null;
+    }
+
+    public static SprintBlocker whyNotSprinting(LocalPlayer player) {
+        if (player.isSprinting()) {
+            return null;
+        }
+        SprintBlocker start = blocking(player);
+        return start != null ? start : stopReason(player);
+    }
+
+    private static boolean shouldStopRunSprinting(LocalPlayer player) {
+        return !isSprintingPossible(player, player.getAbilities().flying)
+                || !player.input.hasForwardImpulse()
+                || player.horizontalCollision && !player.minorHorizontalCollision;
+    }
+
+    private static boolean shouldStopSwimSprinting(LocalPlayer player) {
+        return !isSprintingPossible(player, true)
+                || !player.isInWater()
+                || !player.input.hasForwardImpulse() && !player.onGround() && !player.isShiftKeyDown();
+    }
+
+    private static boolean isSprintingPossible(LocalPlayer player, boolean allowedInShallowWater) {
+        return !player.isMobilityRestricted()
+                && (player.isPassenger()
+                ? vehicleCanSprint(player.getVehicle())
+                : hasEnoughFoodToDoExhaustiveManoeuvres(player))
+                && (allowedInShallowWater || !player.isInShallowWater());
+    }
+
+    private static SprintBlocker sprintingPossibleReason(LocalPlayer player, boolean allowedInShallowWater) {
+        if (player.isMobilityRestricted()) {
+            return RESTRICTED;
+        }
+        if (player.isPassenger() ? !vehicleCanSprint(player.getVehicle()) : !hasEnoughFoodToDoExhaustiveManoeuvres(player)) {
+            return player.isPassenger() ? IN_VEHICLE : TOO_HUNGRY;
+        }
+        if (!allowedInShallowWater && player.isInShallowWater()) {
+            return SHALLOW_WATER;
+        }
+        return null;
+    }
+
+    private static boolean vehicleCanSprint(Entity vehicle) {
+        return vehicle != null && vehicle.canSprint() && vehicle.isLocalInstanceAuthoritative();
+    }
+
+    private static boolean hasEnoughFoodToDoExhaustiveManoeuvres(LocalPlayer player) {
+        return player.getFoodData().hasEnoughFood() || player.getAbilities().mayfly;
     }
 
     private static boolean isStandingStill(LocalPlayer player) {
@@ -49,18 +127,11 @@ public enum SprintBlocker {
     }
 
     private static boolean ridesNonSprintingVehicle(LocalPlayer player) {
-        if (!player.isPassenger()) {
-            return false;
-        }
-        Entity vehicle = player.getVehicle();
-        return vehicle == null || !vehicle.canSprint() || !vehicle.isLocalInstanceAuthoritative();
+        return player.isPassenger() && !vehicleCanSprint(player.getVehicle());
     }
 
     private static boolean lacksSprintFood(LocalPlayer player) {
-        if (player.isPassenger()) {
-            return false;
-        }
-        return !player.getFoodData().hasEnoughFood() && !player.getAbilities().mayfly;
+        return !player.isPassenger() && !hasEnoughFoodToDoExhaustiveManoeuvres(player);
     }
 
     private static boolean isStuckInShallowWater(LocalPlayer player) {
@@ -86,5 +157,9 @@ public enum SprintBlocker {
 
     private static boolean isMovingSlowly(LocalPlayer player) {
         return player.isMovingSlowly() && !player.isUnderWater();
+    }
+
+    private static boolean hitWall(LocalPlayer player) {
+        return player.horizontalCollision && !player.minorHorizontalCollision;
     }
 }

@@ -1,6 +1,6 @@
 # Mitra's Auto Sprinter
 
-<img src="images/preview.png" width="768" height="432" alt="Preview">
+<img src="images/preview.webp" width="768" height="432" alt="Preview">
 
 Press **K** (or a key you choose) to toggle auto-sprint on or off. When you can't sprint, the HUD shows why.
 
@@ -15,18 +15,19 @@ Also fixes [MC-263293](https://bugs.mojang.com/browse/MC/issues/MC-263293), wher
     - **Sprint OFF** (gray): auto-sprint disabled.
     - **Sprint OFF (*reason*)** (yellow): auto-sprint is enabled but something is blocking it (hunger, sneaking, wall, etc.), with the reason shown.
 - Two display modes: text, or the speed-effect icon.
+- Animated text colors: solid, rainbow (whole label cycles), or chroma (per-letter wave).
 - Positioning: presets (top/bottom, left/center/right) or drag-to-place with the built-in editor.
 - Show/hide rules: always on screen, only when blocked, or only briefly on change.
 - HUD text, colors, and blocked-reason messages are configurable.
 - Client-side only: completely safe for multiplayer.
-- *Tiny footprint: only ~800 lines of Java code
+- *Tiny footprint: only ~1000 lines of Java code
 
 ## Requirements
 
 - [Fabric Loader](https://fabricmc.net/)
 - [Fabric API](https://modrinth.com/mod/fabric-api)
 - [Fzzy Config](https://modrinth.com/mod/fzzy-config)
-- [Mod Menu](https://modrinth.com/mod/modmenu)
+- [Mod Menu](https://modrinth.com/mod/modmenu) optional but is recommended for access to the config screen.
 
 Supported Minecraft versions are listed on the [Modrinth page](https://modrinth.com/mod/mitras-auto-sprinter) and the [GitHub releases](https://github.com/Mitra-88/Mitras-Auto-Sprinter).
 
@@ -45,7 +46,7 @@ Keybindings: **Options → Controls → Mitra's Auto Sprinter**.
 
 - **Sprint ON** (green): running.
 - **Sprint OFF** (gray): mod disabled.
-- **Sprint OFF (*reason*)** (yellow): enabled but blocked. Possible reasons: *Dead*, *Spectating*, *Not Moving*, *Blindness*, *In Vehicle*, *Too Hungry*, *Shallow Water*, *Using Item*, *Flying* (elytra), *Sneaking*, *Crawling*, *Hit Wall*, *Riding*.
+- **Sprint OFF (*reason*)** (yellow): enabled but blocked. Possible reasons: *Not Moving*, *Restricted*, *In Vehicle*, *Too Hungry*, *Shallow Water*, *Using Item*, *Flying* (elytra), *Sneaking*, *Crawling*, *Hit Wall*.
 - **Joining...** / **Loading terrain...** (gray): shown briefly after joining or teleporting, until the world is ready.
 
 Icon mode replaces the text with the speed-effect icon, bright when sprinting and faded when not.
@@ -69,9 +70,9 @@ In the editor:
 The keybind and editor cover most use cases, but further settings are available via **Mod Menu → Mitra's Auto Sprinter → Configure**:
 
 - **Sprint**: master on/off switch.
-- **HUD**: visibility, background box, display mode (Text/Icon), show mode (Always/Blocked only/On change), position, text shadow, icon scale, and colors for ON/OFF/Blocked states plus background.
+- **HUD**: visibility, background box, display mode (Text/Icon), show mode (Always/Blocked only/On change), position, text shadow, icon scale, text color mode (Solid/Rainbow/Chroma), and colors for ON/OFF/Blocked states plus background. Solid colors and the color mode itself only apply in Text mode.
 - **Labels**: text for *Sprint ON*, *Sprint OFF*, *Joining...*, *Loading terrain...*, and the blocked-message format (`%s` marks where the reason goes).
-- **Blocked Reasons**: text for each of the 13 blocking reasons.
+- **Blocked Reasons**: text for each of the 10 blocking reasons.
 
 ## Server use
 
@@ -86,5 +87,6 @@ All vanilla sprint restrictions still apply: sneaking, eating, elytra flight, sh
 
 ## License
 
-CC0 1.0. Do whatever you want with it. A shoutout is appreciated but not required.
-See the [`LICENSE`](LICENSE) file for the full text.
+CC0 1.0. Do whatever you want with it. A shoutout is appreciated though (❁´◡`❁).
+
+See the [LICENSE](LICENSE) file for the full text.
