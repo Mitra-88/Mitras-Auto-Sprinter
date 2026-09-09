@@ -12,8 +12,8 @@ import org.lwjgl.glfw.GLFW;
 
 import dev.mitra.client.config.HudAnchor;
 
-import static dev.mitra.client.config.MitrasConfig.MAX_ICON_SCALE;
-import static dev.mitra.client.config.MitrasConfig.MIN_ICON_SCALE;
+import static dev.mitra.client.config.MitrasConfig.MAX_SCALE;
+import static dev.mitra.client.config.MitrasConfig.MIN_SCALE;
 
 public final class HudEditorScreen extends Screen {
 
@@ -37,6 +37,7 @@ public final class HudEditorScreen extends Screen {
     private static final int NUDGE_LARGE_STEP = 10;
     private static final int READOUT_COLOR = 0xFFFFFFFF;
     private static final int READOUT_MARGIN = 2;
+    private static final int NO_GUIDE = -1;
 
     private final MitrasConfig config;
     private final SprintHud hud;
@@ -49,8 +50,8 @@ public final class HudEditorScreen extends Screen {
     private double grabOffsetY;
     private int hudX;
     private int hudY;
-    private Integer guideX;
-    private Integer guideY;
+    private int guideX = NO_GUIDE;
+    private int guideY = NO_GUIDE;
 
     public HudEditorScreen(MitrasConfig config, SprintHud hud) {
         super(Component.translatable("hud.mitrasautosprinter.editor.title"));
@@ -64,8 +65,8 @@ public final class HudEditorScreen extends Screen {
         SprintHud.ElementBox box = hud.resolvedBox(width, height);
         hudX = box.x() + BORDER_PADDING;
         hudY = box.y() + BORDER_PADDING;
-        guideX = null;
-        guideY = null;
+        guideX = NO_GUIDE;
+        guideY = NO_GUIDE;
         keepOnScreen();
     }
 
@@ -100,7 +101,7 @@ public final class HudEditorScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (hud.isIconMode() && isOnHud(mouseX, mouseY) && scrollY != 0) {
+        if (isOnHud(mouseX, mouseY) && scrollY != 0) {
             changeScale(scrollY > 0 ? SCALE_STEP : -SCALE_STEP);
             return true;
         }
@@ -137,25 +138,28 @@ public final class HudEditorScreen extends Screen {
                 resetToDefaultPosition();
                 return true;
             }
-            if (hud.isIconMode()) {
-                if (event.key() == InputConstants.KEY_EQUALS
-                        || event.key() == InputConstants.KEY_ADD) {
-                    changeScale(SCALE_STEP);
-                    return true;
-                }
-                if (event.key() == InputConstants.KEY_MINUS
-                        || event.key() == GLFW.GLFW_KEY_KP_SUBTRACT) {
-                    changeScale(-SCALE_STEP);
-                    return true;
-                }
+            if (event.key() == InputConstants.KEY_EQUALS
+                    || event.key() == InputConstants.KEY_ADD) {
+                changeScale(SCALE_STEP);
+                return true;
+            }
+            if (event.key() == InputConstants.KEY_MINUS
+                    || event.key() == GLFW.GLFW_KEY_KP_SUBTRACT) {
+                changeScale(-SCALE_STEP);
+                return true;
             }
         }
         return super.keyPressed(event);
     }
 
     private void changeScale(double delta) {
-        double scale = Math.round((config.hud.hudIconScale.get() + delta) * 10.0) / 10.0;
-        config.hud.hudIconScale.accept(Math.clamp(scale, MIN_ICON_SCALE, MAX_ICON_SCALE));
+        if (hud.isIconMode()) {
+            double scale = Math.round((config.hud.hudIconScale.get() + delta) * 10.0) / 10.0;
+            config.hud.hudIconScale.accept(Math.clamp(scale, MIN_SCALE, MAX_SCALE));
+        } else {
+            double scale = Math.round((config.hud.hudTextScale.get() + delta) * 10.0) / 10.0;
+            config.hud.hudTextScale.accept(Math.clamp(scale, MIN_SCALE, MAX_SCALE));
+        }
         scaleChanged = true;
         keepOnScreen();
     }
@@ -170,8 +174,8 @@ public final class HudEditorScreen extends Screen {
     private void nudge(int dx, int dy) {
         hudX += dx;
         hudY += dy;
-        guideX = null;
-        guideY = null;
+        guideX = NO_GUIDE;
+        guideY = NO_GUIDE;
         moved = true;
         keepOnScreen();
     }
@@ -189,71 +193,101 @@ public final class HudEditorScreen extends Screen {
         SprintHud.ElementBox box = hud.resolvedBox(width, height);
         hudX = box.x() + BORDER_PADDING;
         hudY = box.y() + BORDER_PADDING;
-        guideX = null;
-        guideY = null;
+        guideX = NO_GUIDE;
+        guideY = NO_GUIDE;
         moved = false;
     }
 
     private int visualPadding() {
-        return config.hud.hudBackground ? SprintHud.BACKGROUND_PADDING : 0;
+        return config.hud.hudBackground.get() && !hud.isIconMode() ? SprintHud.BACKGROUND_PADDING : 0;
     }
 
     private int snapX(int x, boolean snapActive) {
-        guideX = null;
+        guideX = NO_GUIDE;
         if (!snapActive) {
             return x;
         }
         int pad = visualPadding();
+        int elementWidth = hud.elementWidth();
         int best = x;
         int bestDistance = SNAP_THRESHOLD;
-        int[][] targets = {
-                {pad, 0},
-                {width / 2 - hud.elementWidth() / 2, width / 2},
-                {width - hud.elementWidth() - pad, width}
-        };
-        for (int[] target : targets) {
-            int distance = Math.abs(x - target[0]);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = target[0];
-                guideX = target[1];
-            }
+        int guide = NO_GUIDE;
+        int center = width / 2 - elementWidth / 2;
+        int right = width - elementWidth - pad;
+        int distance = Math.abs(x - pad);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = pad;
+            guide = 0;
         }
-        if (guideX == null && gridEnabled) {
+        distance = Math.abs(x - center);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = center;
+            guide = width / 2;
+        }
+        distance = Math.abs(x - right);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = right;
+            guide = width;
+        }
+        if (guide == NO_GUIDE && gridEnabled) {
             best = Math.round(x / (float) GRID_SIZE) * GRID_SIZE;
-            guideX = best;
+            guide = best;
         }
+        guideX = guide;
         return best;
     }
 
     private int snapY(int y, boolean snapActive) {
-        guideY = null;
+        guideY = NO_GUIDE;
         if (!snapActive) {
             return y;
         }
         int pad = visualPadding();
+        int elementHeight = hud.elementHeight();
         int best = y;
         int bestDistance = SNAP_THRESHOLD;
-        int[][] targets = {
-                {pad, 0},
-                {SprintHud.AUTO_CENTER_TOP_Y - pad, SprintHud.AUTO_CENTER_TOP_Y},
-                {height / 2 - hud.elementHeight() / 2, height / 2},
-                {height - SprintHud.BOTTOM_RESERVED_HUD_HEIGHT - hud.elementHeight() - pad,
-                        height - SprintHud.BOTTOM_RESERVED_HUD_HEIGHT},
-                {height - hud.elementHeight() - pad, height}
-        };
-        for (int[] target : targets) {
-            int distance = Math.abs(y - target[0]);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = target[0];
-                guideY = target[1];
-            }
+        int guide = NO_GUIDE;
+        int center = height / 2 - elementHeight / 2;
+        int aboveBottomHud = height - SprintHud.BOTTOM_RESERVED_HUD_HEIGHT;
+        int bottom = height - elementHeight - pad;
+        int distance = Math.abs(y - pad);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = pad;
+            guide = 0;
         }
-        if (guideY == null && gridEnabled) {
+        distance = Math.abs(y - (SprintHud.AUTO_CENTER_TOP_Y - pad));
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = SprintHud.AUTO_CENTER_TOP_Y - pad;
+            guide = SprintHud.AUTO_CENTER_TOP_Y;
+        }
+        distance = Math.abs(y - center);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = center;
+            guide = height / 2;
+        }
+        distance = Math.abs(y - (aboveBottomHud - elementHeight - pad));
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = aboveBottomHud - elementHeight - pad;
+            guide = aboveBottomHud;
+        }
+        distance = Math.abs(y - bottom);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            best = bottom;
+            guide = height;
+        }
+        if (guide == NO_GUIDE && gridEnabled) {
             best = Math.round(y / (float) GRID_SIZE) * GRID_SIZE;
-            guideY = best;
+            guide = best;
         }
+        guideY = guide;
         return best;
     }
 
@@ -306,10 +340,10 @@ public final class HudEditorScreen extends Screen {
         if (dragging) {
             drawPositionReadout(graphics);
         }
-        if (guideX != null) {
+        if (guideX != NO_GUIDE) {
             graphics.fill(guideX, 0, guideX + 1, height, GUIDE_COLOR);
         }
-        if (guideY != null) {
+        if (guideY != NO_GUIDE) {
             graphics.fill(0, guideY, width, guideY + 1, GUIDE_COLOR);
         }
     }

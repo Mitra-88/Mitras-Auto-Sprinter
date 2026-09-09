@@ -63,7 +63,7 @@ Default position is top-center, below the boss bar. This can be changed.
 In the editor:
 
 - Hover over the HUD and press **R** to reset its position.
-- In Icon mode, resize with the mouse wheel or `+`/`-` (numpad works too).
+- Resize with the mouse wheel or `+`/`-` (numpad works too) — the icon in Icon mode, the text in Text mode.
 - **Arrow keys** nudge the HUD by 1 pixel; **Shift+Arrows** move in bigger steps (10, or the grid size when grid snapping is on).
 - **Double-click** the HUD to center it horizontally.
 - While dragging, the HUD snaps to the screen edges, the horizontal and vertical center lines, the default top position, and the safe area above the bottom HUD. Snapping aligns what you see (the background box counts when it's enabled), and a magenta guide line appears while snapped.
@@ -76,7 +76,7 @@ In the editor:
 The keybind and editor cover most use cases, but further settings are available via **Mod Menu → Mitra's Auto Sprinter → Configure**:
 
 - **Sprint**: master on/off switch.
-- **HUD**: visibility, background box, display mode (Text/Icon), show mode (Always/Blocked only/On change), position, text shadow, icon scale, text color mode (Solid/Rainbow/Chroma), and colors for ON/OFF/Blocked states plus background. Solid colors and the color mode itself only apply in Text mode.
+- **HUD**: visibility, background box (Text mode only), display mode (Text/Icon), show mode (Always/Blocked only/On change), position, text shadow, icon scale, text scale, text color mode (Solid/Rainbow/Chroma), and colors for ON/OFF/Blocked states plus background. Text scale, solid colors, and the color mode itself only apply in Text mode.
 - **Labels**: text for *Sprint ON*, *Sprint OFF*, *Joining...*, *Loading terrain...*, and the blocked-message format (`%s` marks where the reason goes).
 - **Blocked Reasons**: text for each of the 10 blocking reasons.
 

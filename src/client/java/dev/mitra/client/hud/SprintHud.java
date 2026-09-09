@@ -5,6 +5,7 @@ import dev.mitra.client.config.HudAnchor;
 import dev.mitra.client.config.MitrasConfig;
 import dev.mitra.client.config.TextColorMode;
 import dev.mitra.client.sprint.SprintBlocker;
+import me.fzzyhmstrs.fzzy_config.validation.ValidatedField;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.DeltaTracker;
@@ -73,6 +74,12 @@ public final class SprintHud {
     private Component lastText;
     private int onChangeTicks;
 
+    private int colorOnArgb;
+    private int colorOffArgb;
+    private int colorBlockedArgb;
+    private int backgroundColorArgb;
+    private boolean colorsStale = true;
+
     private Integer fixedTextWidthCache;
     private long widthCheckedAt;
 
@@ -89,9 +96,22 @@ public final class SprintHud {
                 config.reasons.reasonSneaking, config.reasons.reasonSlow, config.reasons.reasonWall)) {
             label.listenToEntry(_ -> labelsDirty = true);
         }
+        for (ValidatedField<?> colorSetting : List.of(
+                config.hud.colorOn, config.hud.colorOff, config.hud.colorBlocked, config.hud.backgroundColor)) {
+            colorSetting.listenToEntry(_ -> colorsStale = true);
+        }
 
         this.text = textOff;
-        this.color = config.hud.colorOff.get().argb();
+        refreshColors();
+        this.color = colorOffArgb;
+    }
+
+    private void refreshColors() {
+        colorOnArgb = config.hud.colorOn.get().argb();
+        colorOffArgb = config.hud.colorOff.get().argb();
+        colorBlockedArgb = config.hud.colorBlocked.get().argb();
+        backgroundColorArgb = config.hud.backgroundColor.get().argb();
+        colorsStale = false;
     }
 
     public void attach() {
@@ -103,6 +123,9 @@ public final class SprintHud {
     }
 
     public void update(Minecraft client, boolean sprintEnabled) {
+        if (colorsStale) {
+            refreshColors();
+        }
         worldChange.tick(client);
 
         if (worldChange.consumeWorldChanged()) {
@@ -120,7 +143,7 @@ public final class SprintHud {
 
         if (worldChange.isSettling()) {
             text = labelFor(worldChange.currentReason(client));
-            color = config.hud.colorOff.get().argb();
+            color = colorOffArgb;
             stateOn = false;
             blocked = false;
             worldChange.countDownDisplayTick();
@@ -158,35 +181,32 @@ public final class SprintHud {
 
     private void updateSprintState(Minecraft client, boolean sprintEnabled) {
         LocalPlayer player = client.player;
-        int onColor = config.hud.colorOn.get().argb();
-        int offColor = config.hud.colorOff.get().argb();
-        int blockedColor = config.hud.colorBlocked.get().argb();
 
         if (!sprintEnabled) {
             text = textOff;
-            color = offColor;
+            color = colorOffArgb;
             blocked = false;
         } else if (player == null) {
             text = textOn;
-            color = offColor;
+            color = colorOffArgb;
             blocked = false;
         } else if (player.isSprinting()) {
             text = textOn;
-            color = onColor;
+            color = colorOnArgb;
             blocked = false;
         } else {
             SprintBlocker reason = SprintBlocker.whyNotSprinting(player);
             if (reason != null) {
                 text = blockedText.get(reason);
-                color = blockedColor;
+                color = colorBlockedArgb;
                 blocked = true;
             } else {
                 text = textOn;
-                color = onColor;
+                color = colorOnArgb;
                 blocked = false;
             }
         }
-        stateOn = color == onColor;
+        stateOn = color == colorOnArgb;
 
         if (text != lastText) {
             lastText = text;
@@ -206,12 +226,16 @@ public final class SprintHud {
         return config.hud.displayMode.get() == DisplayMode.ICON;
     }
 
+    private float textScale() {
+        return config.hud.hudTextScale.get().floatValue();
+    }
+
     int elementWidth() {
-        return isIconMode() ? iconSize() : fixedTextWidth();
+        return isIconMode() ? iconSize() : Math.round(fixedTextWidth() * textScale());
     }
 
     int elementHeight() {
-        return isIconMode() ? iconSize() : Minecraft.getInstance().font.lineHeight;
+        return isIconMode() ? iconSize() : Math.round(Minecraft.getInstance().font.lineHeight * textScale());
     }
 
     private int iconSize() {
@@ -238,13 +262,13 @@ public final class SprintHud {
         var font = Minecraft.getInstance().font;
         int elementWidth = elementWidth();
         int elementHeight = elementHeight();
-        if (config.hud.hudBackground) {
+        if (config.hud.hudBackground.get() && !isIconMode()) {
             graphics.fill(
                     x - BACKGROUND_PADDING,
                     y - BACKGROUND_PADDING,
                     x + elementWidth + BACKGROUND_PADDING,
                     y + elementHeight + BACKGROUND_PADDING,
-                    config.hud.backgroundColor.get().argb());
+                    backgroundColorArgb);
         }
         if (isIconMode()) {
             float alpha = stateOn ? 1.0f : ICON_DIMMED_ALPHA;
@@ -254,19 +278,30 @@ public final class SprintHud {
                     x, y, elementWidth, elementHeight,
                     ARGB.white(alpha));
         } else {
-            graphics.text(font, text, x + (fixedTextWidth() - font.width(text)) / 2, y, color, config.hud.hudTextShadow);
-            int textX = x + (fixedTextWidth() - font.width(text)) / 2;
+            int textX = (fixedTextWidth() - font.width(text)) / 2;
+            var pose = graphics.pose();
+            pose.pushMatrix();
+            pose.translate(x, y);
+            pose.scale(textScale(), textScale());
             TextColorMode colorMode = config.hud.textColorMode.get();
             if (colorMode == TextColorMode.SOLID) {
-                graphics.text(font, text, textX, y, color, config.hud.hudTextShadow);
+                graphics.text(font, text, textX, 0, color, config.hud.hudTextShadow);
             } else {
-                drawCyclingText(graphics, font, textX, y, colorMode == TextColorMode.CHROMA);
+                drawCyclingText(graphics, font, textX, 0, colorMode == TextColorMode.CHROMA);
             }
+            pose.popMatrix();
         }
     }
 
+    private Component cyclingText;
+    private String cyclingTextString;
+
     private void drawCyclingText(GuiGraphicsExtractor graphics, Font font, int x, int y, boolean chroma) {
-        String string = text.getString();
+        if (text != cyclingText) {
+            cyclingText = text;
+            cyclingTextString = text.getString();
+        }
+        String string = cyclingTextString;
         int length = string.length();
         if (length == 0) {
             return;
