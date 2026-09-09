@@ -1,7 +1,6 @@
 package dev.mitra.client.hud;
 
 import dev.mitra.client.config.DisplayMode;
-import dev.mitra.client.config.HudAnchor;
 import dev.mitra.client.config.MitrasConfig;
 import dev.mitra.client.config.TextColorMode;
 import dev.mitra.client.sprint.SprintBlocker;
@@ -78,7 +77,7 @@ public final class SprintHud {
     private int colorOffArgb;
     private int colorBlockedArgb;
     private int backgroundColorArgb;
-    private boolean colorsStale = true;
+    private volatile boolean colorsStale = true;
 
     private Integer fixedTextWidthCache;
     private long widthCheckedAt;
@@ -278,16 +277,21 @@ public final class SprintHud {
                     x, y, elementWidth, elementHeight,
                     ARGB.white(alpha));
         } else {
-            int textX = (fixedTextWidth() - font.width(text)) / 2;
+            int fixedWidth = fixedTextWidth();
+            if (text != laidOutText || fixedWidth != laidOutForWidth) {
+                laidOutText = text;
+                laidOutForWidth = fixedWidth;
+                laidOutTextOffset = (fixedWidth - font.width(text)) / 2;
+            }
             var pose = graphics.pose();
             pose.pushMatrix();
             pose.translate(x, y);
             pose.scale(textScale(), textScale());
             TextColorMode colorMode = config.hud.textColorMode.get();
             if (colorMode == TextColorMode.SOLID) {
-                graphics.text(font, text, textX, 0, color, config.hud.hudTextShadow);
+                graphics.text(font, text, laidOutTextOffset, 0, color, config.hud.hudTextShadow);
             } else {
-                drawCyclingText(graphics, font, textX, colorMode == TextColorMode.CHROMA);
+                drawCyclingText(graphics, font, laidOutTextOffset, colorMode == TextColorMode.CHROMA);
             }
             pose.popMatrix();
         }
@@ -295,6 +299,9 @@ public final class SprintHud {
 
     private Component cyclingText;
     private String cyclingTextString;
+    private Component laidOutText;
+    private int laidOutForWidth;
+    private int laidOutTextOffset;
 
     private void drawCyclingText(GuiGraphicsExtractor graphics, Font font, int x, boolean chroma) {
         if (text != cyclingText) {
@@ -307,13 +314,14 @@ public final class SprintHud {
             return;
         }
         int hueBase = (int) (Util.getMillis() % HUE_CYCLE_MS * HUE_STEPS / HUE_CYCLE_MS);
+        boolean shadow = config.hud.hudTextShadow;
         int charX = x;
         for (int i = 0; i < length; i++) {
             char c = string.charAt(i);
             int width = glyphWidth(font, c);
             if (c != ' ') {
                 int hue = chroma ? (hueBase + i * CHROMA_CHAR_SPREAD_DEGREES) % HUE_STEPS : hueBase;
-                graphics.text(font, glyph(c), charX, 0, HUE_LUT[hue], config.hud.hudTextShadow);
+                graphics.text(font, glyph(c), charX, 0, HUE_LUT[hue], shadow);
             }
             charX += width;
         }
@@ -351,7 +359,6 @@ public final class SprintHud {
         return Math.clamp(position, 0, Math.max(0, screenSize - elementSize));
     }
 
-
     static double normalizeCoordinate(int position, int screenSize, int elementSize) {
         int travel = Math.max(1, screenSize - elementSize);
         return Math.clamp(position / (double) travel, 0.0, 1.0);
@@ -368,23 +375,31 @@ public final class SprintHud {
         int elementHeight = elementHeight();
         int boxWidth = elementWidth + BACKGROUND_PADDING * 2;
         int boxHeight = elementHeight + BACKGROUND_PADDING * 2;
-        HudAnchor anchor = config.hud.hudAnchor.get();
-        int x = switch (anchor) {
+        return new ElementBox(
+                resolvedBoxX(guiWidth, boxWidth, elementWidth),
+                resolvedBoxY(guiHeight, boxHeight, elementHeight),
+                boxWidth,
+                boxHeight);
+    }
+
+    private int resolvedBoxX(int guiWidth, int boxWidth, int elementWidth) {
+        int x = switch (config.hud.hudAnchor.get()) {
             case AUTO_CENTER_TOP, TOP_CENTER, BOTTOM_CENTER -> (guiWidth - boxWidth) / 2;
             case TOP_LEFT, BOTTOM_LEFT -> 0;
             case TOP_RIGHT, BOTTOM_RIGHT -> guiWidth - boxWidth;
-
             case CUSTOM -> denormalizeCoordinate(config.hud.hudX.get(), guiWidth, elementWidth) - BACKGROUND_PADDING;
         };
-        int y = switch (anchor) {
+        return clampToScreen(x, guiWidth, boxWidth);
+    }
+
+    private int resolvedBoxY(int guiHeight, int boxHeight, int elementHeight) {
+        int y = switch (config.hud.hudAnchor.get()) {
             case AUTO_CENTER_TOP -> AUTO_CENTER_TOP_Y - BACKGROUND_PADDING;
             case TOP_LEFT, TOP_CENTER, TOP_RIGHT -> 0;
             case BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT -> guiHeight - BOTTOM_RESERVED_HUD_HEIGHT - boxHeight;
             case CUSTOM -> denormalizeCoordinate(config.hud.hudY.get(), guiHeight, elementHeight) - BACKGROUND_PADDING;
         };
-        x = clampToScreen(x, guiWidth, boxWidth);
-        y = clampToScreen(y, guiHeight, boxHeight);
-        return new ElementBox(x, y, boxWidth, boxHeight);
+        return clampToScreen(y, guiHeight, boxHeight);
     }
 
     public void resetRenderFailure() {
@@ -396,8 +411,13 @@ public final class SprintHud {
             return;
         }
         try {
-            ElementBox box = resolvedBox(graphics.guiWidth(), graphics.guiHeight());
-            drawAt(graphics, box.x() + BACKGROUND_PADDING, box.y() + BACKGROUND_PADDING);
+            int guiWidth = graphics.guiWidth();
+            int guiHeight = graphics.guiHeight();
+            int elementWidth = elementWidth();
+            int elementHeight = elementHeight();
+            int boxX = resolvedBoxX(guiWidth, elementWidth + BACKGROUND_PADDING * 2, elementWidth);
+            int boxY = resolvedBoxY(guiHeight, elementHeight + BACKGROUND_PADDING * 2, elementHeight);
+            drawAt(graphics, boxX + BACKGROUND_PADDING, boxY + BACKGROUND_PADDING);
         } catch (Throwable t) {
             renderBroken = true;
             LOGGER.warn("HUD rendering failed once; disabling it until the HUD editor is opened or the world is changed.", t);
