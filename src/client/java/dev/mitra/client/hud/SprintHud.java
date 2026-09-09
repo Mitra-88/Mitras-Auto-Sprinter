@@ -287,7 +287,7 @@ public final class SprintHud {
             if (colorMode == TextColorMode.SOLID) {
                 graphics.text(font, text, textX, 0, color, config.hud.hudTextShadow);
             } else {
-                drawCyclingText(graphics, font, textX, 0, colorMode == TextColorMode.CHROMA);
+                drawCyclingText(graphics, font, textX, colorMode == TextColorMode.CHROMA);
             }
             pose.popMatrix();
         }
@@ -296,7 +296,7 @@ public final class SprintHud {
     private Component cyclingText;
     private String cyclingTextString;
 
-    private void drawCyclingText(GuiGraphicsExtractor graphics, Font font, int x, int y, boolean chroma) {
+    private void drawCyclingText(GuiGraphicsExtractor graphics, Font font, int x, boolean chroma) {
         if (text != cyclingText) {
             cyclingText = text;
             cyclingTextString = text.getString();
@@ -313,7 +313,7 @@ public final class SprintHud {
             int width = glyphWidth(font, c);
             if (c != ' ') {
                 int hue = chroma ? (hueBase + i * CHROMA_CHAR_SPREAD_DEGREES) % HUE_STEPS : hueBase;
-                graphics.text(font, glyph(c), charX, y, HUE_LUT[hue], config.hud.hudTextShadow);
+                graphics.text(font, glyph(c), charX, 0, HUE_LUT[hue], config.hud.hudTextShadow);
             }
             charX += width;
         }

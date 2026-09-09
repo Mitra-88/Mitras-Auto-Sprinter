@@ -228,7 +228,6 @@ public final class HudEditorScreen extends Screen {
         }
         distance = Math.abs(x - right);
         if (distance < bestDistance) {
-            bestDistance = distance;
             best = right;
             guide = width;
         }
@@ -279,7 +278,6 @@ public final class HudEditorScreen extends Screen {
         }
         distance = Math.abs(y - bottom);
         if (distance < bestDistance) {
-            bestDistance = distance;
             best = bottom;
             guide = height;
         }

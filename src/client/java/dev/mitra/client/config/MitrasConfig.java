@@ -62,7 +62,7 @@ public final class MitrasConfig extends Config {
         private final ValidatedDouble hudYField = new ValidatedDouble(0.01, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
         private final ValidatedEnum<TextColorMode> textColorModeEnum = new ValidatedEnum<>(TextColorMode.SOLID, ValidatedEnum.WidgetType.CYCLING);
 
-        // Group 1: whether the indicator shows at all, and in which mode.
+        @SuppressWarnings("unused")
         public ConfigGroup display = new ConfigGroup("display");
         public boolean hudVisible = true;
         public ValidatedEnum<DisplayMode> displayMode = new ValidatedEnum<>(DisplayMode.TEXT, ValidatedEnum.WidgetType.CYCLING);
@@ -73,7 +73,7 @@ public final class MitrasConfig extends Config {
                 new ValidatedBoolean(false))
                 .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
 
-        // Group 2: where the indicator sits and how big it is.
+        @SuppressWarnings("unused")
         public ConfigGroup layout = new ConfigGroup("layout");
         public ValidatedEnum<HudAnchor> hudAnchor = new ValidatedEnum<>(HudAnchor.AUTO_CENTER_TOP, ValidatedEnum.WidgetType.SCROLLABLE);
         public ValidatedCondition<Double> hudX = new ValidatedCondition<>(
@@ -93,12 +93,13 @@ public final class MitrasConfig extends Config {
                 new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER))
                 .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
         @ConfigGroup.Pop
+        @SuppressWarnings("unused")
         public ConfigAction openHudEditorButton = new ConfigAction.Builder()
                 .title(Component.translatable("mitrasautosprinter.mitrasautosprinter.hud.openHudEditorButton"))
                 .desc(Component.translatable("mitrasautosprinter.mitrasautosprinter.hud.openHudEditor.desc"))
                 .build(() -> MitrasConfig.hudEditorAction.run());
 
-        // Group 3: text styling and colors.
+        @SuppressWarnings("unused")
         public ConfigGroup style = new ConfigGroup("style");
         public boolean hudTextShadow = true;
         public ValidatedCondition<TextColorMode> textColorMode = new ValidatedCondition<>(
