@@ -33,14 +33,14 @@ public final class SprintHud {
     private static final Logger LOGGER = LoggerFactory.getLogger("mitrasautosprinter");
     private static final Identifier ELEMENT_ID = Identifier.fromNamespaceAndPath("mitrasautosprinter", "sprint");
 
-    private static final int BACKGROUND_PADDING = 3;
+    static final int BACKGROUND_PADDING = 3;
     private static final long WIDTH_RECHECK_NANOS = 1_000_000_000L;
     private static final int ICON_BASE_SIZE = 18;
     private static final float ICON_DIMMED_ALPHA = 0.35f;
     private static final Identifier SPEED_ICON = Hud.getMobEffectSprite(MobEffects.SPEED);
     private static final int ON_CHANGE_TICKS = 60;
-    private static final int AUTO_CENTER_TOP_Y = 33;
-    private static final int BOTTOM_RESERVED_HUD_HEIGHT = 50;
+    static final int AUTO_CENTER_TOP_Y = 33;
+    static final int BOTTOM_RESERVED_HUD_HEIGHT = 50;
     private static final int HUE_STEPS = 360;
     private static final long HUE_CYCLE_MS = 3000;
     private static final int CHROMA_CHAR_SPREAD_DEGREES = 30;

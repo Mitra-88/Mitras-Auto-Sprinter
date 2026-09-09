@@ -64,6 +64,12 @@ In the editor:
 
 - Hover over the HUD and press **R** to reset its position.
 - In Icon mode, resize with the mouse wheel or `+`/`-` (numpad works too).
+- **Arrow keys** nudge the HUD by 1 pixel; **Shift+Arrows** move in bigger steps (10, or the grid size when grid snapping is on).
+- **Double-click** the HUD to center it horizontally.
+- While dragging, the HUD snaps to the screen edges, the horizontal and vertical center lines, the default top position, and the safe area above the bottom HUD. Snapping aligns what you see (the background box counts when it's enabled), and a magenta guide line appears while snapped.
+- Press **G** to toggle grid snapping — an 8-pixel grid, drawn faintly with brighter lines every 32 pixels.
+- Hold **Ctrl** while dragging to move freely without snapping (nudging with the arrow keys is always snap-free).
+- The HUD's exact position (in GUI pixels) is shown above it while dragging.
 
 ## Configuration
 

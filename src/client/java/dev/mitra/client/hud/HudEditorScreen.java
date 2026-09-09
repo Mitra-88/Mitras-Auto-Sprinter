@@ -17,8 +17,10 @@ import static dev.mitra.client.config.MitrasConfig.MIN_ICON_SCALE;
 
 public final class HudEditorScreen extends Screen {
 
-    private static final Component INSTRUCTIONS =
+    private static final Component INSTRUCTIONS_MAIN =
             Component.translatable("hud.mitrasautosprinter.editor.instructions");
+    private static final Component INSTRUCTIONS_SNAPPING =
+            Component.translatable("hud.mitrasautosprinter.editor.instructions_snapping");
 
     private static final int GRAB_TOLERANCE = 4;
     private static final int BORDER_PADDING = 3;
@@ -26,6 +28,15 @@ public final class HudEditorScreen extends Screen {
     private static final int OVERLAY_SHADE = 0x66000000;
     private static final int BORDER_COLOR = 0xFFFFFFFF;
     private static final int BORDER_COLOR_DRAGGING = 0xFF00FF00;
+    private static final int GRID_SIZE = 8;
+    private static final int GRID_MAJOR_PERIOD = 4;
+    private static final int GRID_COLOR_MINOR = 0x18FFFFFF;
+    private static final int GRID_COLOR_MAJOR = 0x30FFFFFF;
+    private static final int SNAP_THRESHOLD = 6;
+    private static final int GUIDE_COLOR = 0xFFFF00FF;
+    private static final int NUDGE_LARGE_STEP = 10;
+    private static final int READOUT_COLOR = 0xFFFFFFFF;
+    private static final int READOUT_MARGIN = 2;
 
     private final MitrasConfig config;
     private final SprintHud hud;
@@ -33,10 +44,13 @@ public final class HudEditorScreen extends Screen {
     private boolean dragging;
     private boolean moved;
     private boolean scaleChanged;
+    private boolean gridEnabled;
     private double grabOffsetX;
     private double grabOffsetY;
     private int hudX;
     private int hudY;
+    private Integer guideX;
+    private Integer guideY;
 
     public HudEditorScreen(MitrasConfig config, SprintHud hud) {
         super(Component.translatable("hud.mitrasautosprinter.editor.title"));
@@ -50,12 +64,17 @@ public final class HudEditorScreen extends Screen {
         SprintHud.ElementBox box = hud.resolvedBox(width, height);
         hudX = box.x() + BORDER_PADDING;
         hudY = box.y() + BORDER_PADDING;
+        guideX = null;
+        guideY = null;
         keepOnScreen();
     }
 
     @Override
     public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubleClick) {
         if (isOnHud(event.x(), event.y())) {
+            if (doubleClick) {
+                centerHorizontally();
+            }
             dragging = true;
             grabOffsetX = event.x() - hudX;
             grabOffsetY = event.y() - hudY;
@@ -69,10 +88,7 @@ public final class HudEditorScreen extends Screen {
         if (!dragging) {
             return super.mouseDragged(event, dragX, dragY);
         }
-        hudX = (int) (event.x() - grabOffsetX);
-        hudY = (int) (event.y() - grabOffsetY);
-        moved = true;
-        keepOnScreen();
+        moveTo((int) (event.x() - grabOffsetX), (int) (event.y() - grabOffsetY), !event.hasControlDown());
         return true;
     }
 
@@ -93,6 +109,29 @@ public final class HudEditorScreen extends Screen {
 
     @Override
     public boolean keyPressed(@NonNull KeyEvent event) {
+        if (event.key() == InputConstants.KEY_G) {
+            gridEnabled = !gridEnabled;
+            return true;
+        }
+        int step = event.hasShiftDown() ? (gridEnabled ? GRID_SIZE : NUDGE_LARGE_STEP) : 1;
+        switch (event.key()) {
+            case GLFW.GLFW_KEY_LEFT -> {
+                nudge(-step, 0);
+                return true;
+            }
+            case GLFW.GLFW_KEY_RIGHT -> {
+                nudge(step, 0);
+                return true;
+            }
+            case GLFW.GLFW_KEY_UP -> {
+                nudge(0, -step);
+                return true;
+            }
+            case GLFW.GLFW_KEY_DOWN -> {
+                nudge(0, step);
+                return true;
+            }
+        }
         if (isOnHud(scaledMouseX(), scaledMouseY())) {
             if (event.key() == InputConstants.KEY_R) {
                 resetToDefaultPosition();
@@ -121,13 +160,101 @@ public final class HudEditorScreen extends Screen {
         keepOnScreen();
     }
 
+    private void moveTo(int x, int y, boolean snapActive) {
+        hudX = snapX(x, snapActive);
+        hudY = snapY(y, snapActive);
+        moved = true;
+        keepOnScreen();
+    }
+
+    private void nudge(int dx, int dy) {
+        hudX += dx;
+        hudY += dy;
+        guideX = null;
+        guideY = null;
+        moved = true;
+        keepOnScreen();
+    }
+
+    private void centerHorizontally() {
+        hudX = width / 2 - hud.elementWidth() / 2;
+        guideX = width / 2;
+        moved = true;
+        keepOnScreen();
+    }
+
     private void resetToDefaultPosition() {
         config.hud.hudAnchor.accept(HudAnchor.AUTO_CENTER_TOP);
         config.save();
         SprintHud.ElementBox box = hud.resolvedBox(width, height);
         hudX = box.x() + BORDER_PADDING;
         hudY = box.y() + BORDER_PADDING;
+        guideX = null;
+        guideY = null;
         moved = false;
+    }
+
+    private int visualPadding() {
+        return config.hud.hudBackground ? SprintHud.BACKGROUND_PADDING : 0;
+    }
+
+    private int snapX(int x, boolean snapActive) {
+        guideX = null;
+        if (!snapActive) {
+            return x;
+        }
+        int pad = visualPadding();
+        int best = x;
+        int bestDistance = SNAP_THRESHOLD;
+        int[][] targets = {
+                {pad, 0},
+                {width / 2 - hud.elementWidth() / 2, width / 2},
+                {width - hud.elementWidth() - pad, width}
+        };
+        for (int[] target : targets) {
+            int distance = Math.abs(x - target[0]);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = target[0];
+                guideX = target[1];
+            }
+        }
+        if (guideX == null && gridEnabled) {
+            best = Math.round(x / (float) GRID_SIZE) * GRID_SIZE;
+            guideX = best;
+        }
+        return best;
+    }
+
+    private int snapY(int y, boolean snapActive) {
+        guideY = null;
+        if (!snapActive) {
+            return y;
+        }
+        int pad = visualPadding();
+        int best = y;
+        int bestDistance = SNAP_THRESHOLD;
+        int[][] targets = {
+                {pad, 0},
+                {SprintHud.AUTO_CENTER_TOP_Y - pad, SprintHud.AUTO_CENTER_TOP_Y},
+                {height / 2 - hud.elementHeight() / 2, height / 2},
+                {height - SprintHud.BOTTOM_RESERVED_HUD_HEIGHT - hud.elementHeight() - pad,
+                        height - SprintHud.BOTTOM_RESERVED_HUD_HEIGHT},
+                {height - hud.elementHeight() - pad, height}
+        };
+        for (int[] target : targets) {
+            int distance = Math.abs(y - target[0]);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = target[0];
+                guideY = target[1];
+            }
+        }
+        if (guideY == null && gridEnabled) {
+            best = Math.round(y / (float) GRID_SIZE) * GRID_SIZE;
+            guideY = best;
+        }
+        return best;
     }
 
     private double scaledMouseX() {
@@ -156,7 +283,13 @@ public final class HudEditorScreen extends Screen {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
 
         graphics.fill(0, 0, width, height, OVERLAY_SHADE);
-        graphics.text(font, INSTRUCTIONS, (width - font.width(INSTRUCTIONS)) / 2, height / 2 - 40, 0xFFFFFFFF, true);
+        if (gridEnabled) {
+            drawGrid(graphics);
+        }
+        graphics.text(font, INSTRUCTIONS_MAIN, (width - font.width(INSTRUCTIONS_MAIN)) / 2,
+                height / 2 - 48, 0xFFFFFFFF, true);
+        graphics.text(font, INSTRUCTIONS_SNAPPING, (width - font.width(INSTRUCTIONS_SNAPPING)) / 2,
+                height / 2 - 36, 0xFFFFFFFF, true);
 
         try {
             hud.drawAt(graphics, hudX, hudY);
@@ -169,6 +302,41 @@ public final class HudEditorScreen extends Screen {
                 hud.elementWidth() + BORDER_PADDING * 2,
                 hud.elementHeight() + BORDER_PADDING * 2,
                 dragging ? BORDER_COLOR_DRAGGING : BORDER_COLOR);
+
+        if (dragging) {
+            drawPositionReadout(graphics);
+        }
+        if (guideX != null) {
+            graphics.fill(guideX, 0, guideX + 1, height, GUIDE_COLOR);
+        }
+        if (guideY != null) {
+            graphics.fill(0, guideY, width, guideY + 1, GUIDE_COLOR);
+        }
+    }
+
+    private void drawGrid(GuiGraphicsExtractor graphics) {
+        int line = 0;
+        for (int gridX = 0; gridX < width; gridX += GRID_SIZE, line++) {
+            graphics.fill(gridX, 0, gridX + 1, height,
+                    line % GRID_MAJOR_PERIOD == 0 ? GRID_COLOR_MAJOR : GRID_COLOR_MINOR);
+        }
+        line = 0;
+        for (int gridY = 0; gridY < height; gridY += GRID_SIZE, line++) {
+            graphics.fill(0, gridY, width, gridY + 1,
+                    line % GRID_MAJOR_PERIOD == 0 ? GRID_COLOR_MAJOR : GRID_COLOR_MINOR);
+        }
+    }
+
+    private void drawPositionReadout(GuiGraphicsExtractor graphics) {
+        String readout = hudX + ", " + hudY;
+        int textWidth = font.width(readout);
+        int x = Math.clamp(hudX + hud.elementWidth() / 2 - textWidth / 2,
+                READOUT_MARGIN, Math.max(READOUT_MARGIN, width - textWidth - READOUT_MARGIN));
+        int y = hudY - font.lineHeight - READOUT_MARGIN * 2;
+        if (y < READOUT_MARGIN) {
+            y = hudY + hud.elementHeight() + READOUT_MARGIN * 2;
+        }
+        graphics.text(font, Component.literal(readout), x, y, READOUT_COLOR, true);
     }
 
     private boolean isOnHud(double x, double y) {
@@ -177,9 +345,8 @@ public final class HudEditorScreen extends Screen {
     }
 
     private void keepOnScreen() {
-        hudX = SprintHud.clampToScreen(hudX - BORDER_PADDING, width, hud.elementWidth() + BORDER_PADDING * 2)
-                + BORDER_PADDING;
-        hudY = SprintHud.clampToScreen(hudY - BORDER_PADDING, height, hud.elementHeight() + BORDER_PADDING * 2)
-                + BORDER_PADDING;
+        int pad = visualPadding();
+        hudX = Math.clamp(hudX, pad, Math.max(pad, width - hud.elementWidth() - pad));
+        hudY = Math.clamp(hudY, pad, Math.max(pad, height - hud.elementHeight() - pad));
     }
 }
