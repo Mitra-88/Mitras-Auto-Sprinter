@@ -43,11 +43,6 @@ public enum SprintBlocker {
         return null;
     }
 
-    public static boolean shouldStopSprinting(LocalPlayer player) {
-        return player.isSprinting()
-                && (player.isSwimming() ? shouldStopSwimSprinting(player) : shouldStopRunSprinting(player));
-    }
-
     public static SprintBlocker stopReason(LocalPlayer player) {
         if (player.isSwimming()) {
             if (!isSprintingPossible(player, true)) {
@@ -79,18 +74,6 @@ public enum SprintBlocker {
         }
         SprintBlocker start = blocking(player);
         return start != null ? start : stopReason(player);
-    }
-
-    private static boolean shouldStopRunSprinting(LocalPlayer player) {
-        return !isSprintingPossible(player, player.getAbilities().flying)
-                || !player.input.hasForwardImpulse()
-                || player.horizontalCollision && !player.minorHorizontalCollision;
-    }
-
-    private static boolean shouldStopSwimSprinting(LocalPlayer player) {
-        return !isSprintingPossible(player, true)
-                || !player.isInWater()
-                || !player.input.hasForwardImpulse() && !player.onGround() && !player.isShiftKeyDown();
     }
 
     private static boolean isSprintingPossible(LocalPlayer player, boolean allowedInShallowWater) {

@@ -1,4 +1,4 @@
-name: Build Mod
+name: Build Mitra's Auto Sprinter
 
 on:
   push:

@@ -5,6 +5,7 @@ import dev.mitra.client.config.MitrasConfig;
 import dev.mitra.client.config.TextColorMode;
 import dev.mitra.client.sprint.SprintBlocker;
 import me.fzzyhmstrs.fzzy_config.validation.ValidatedField;
+import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.DeltaTracker;
@@ -23,7 +24,6 @@ import net.minecraft.world.effect.MobEffects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -44,11 +44,7 @@ public final class SprintHud {
     private static final int HUE_STEPS = 360;
     private static final long HUE_CYCLE_MS = 3000;
     private static final int CHROMA_CHAR_SPREAD_DEGREES = 30;
-    private static final int GLYPH_CACHE_SIZE = 128;
     private static final int[] HUE_LUT = new int[HUE_STEPS];
-    private static final String[] GLYPH_CACHE = new String[GLYPH_CACHE_SIZE];
-    private static final int[] GLYPH_WIDTH_CACHE = new int[GLYPH_CACHE_SIZE];
-    private static Font glyphCacheFont;
 
     static {
         for (int i = 0; i < HUE_STEPS; i++) {
@@ -63,6 +59,7 @@ public final class SprintHud {
     private Component textOff;
     private Component textJoining;
     private Component textTerrain;
+    private Component textUnknown;
     private final Map<SprintBlocker, Component> blockedText = new EnumMap<>(SprintBlocker.class);
     private volatile boolean labelsDirty = true;
 
@@ -86,23 +83,21 @@ public final class SprintHud {
     public SprintHud(MitrasConfig config) {
         this.config = config;
         rebuildLabels();
-        for (me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString label : List.of(
+        for (ValidatedString label : List.of(
                 config.text.textOn, config.text.textOff, config.text.textJoining,
-                config.text.textTerrain, config.text.textBlockedFormat,
-                config.reasons.reasonStanding, config.reasons.reasonRestricted,
-                config.reasons.reasonVehicle, config.reasons.reasonHungry,
-                config.reasons.reasonShallowWater, config.reasons.reasonUsingItem, config.reasons.reasonElytra,
-                config.reasons.reasonSneaking, config.reasons.reasonSlow, config.reasons.reasonWall)) {
+                config.text.textTerrain, config.text.textBlockedFormat, config.text.textUnknown)) {
             label.listenToEntry(_ -> labelsDirty = true);
+        }
+        for (SprintBlocker reason : SprintBlocker.values()) {
+            reasonLabel(reason).listenToEntry(_ -> labelsDirty = true);
         }
         for (ValidatedField<?> colorSetting : List.of(
                 config.hud.colorOn, config.hud.colorOff, config.hud.colorBlocked, config.hud.backgroundColor)) {
             colorSetting.listenToEntry(_ -> colorsStale = true);
         }
 
-        this.text = textOff;
         refreshColors();
-        this.color = colorOffArgb;
+        setState(textOff, colorOffArgb, false, false);
     }
 
     private void refreshColors() {
@@ -141,10 +136,7 @@ public final class SprintHud {
         }
 
         if (worldChange.isSettling()) {
-            text = labelFor(worldChange.currentReason(client));
-            color = colorOffArgb;
-            stateOn = false;
-            blocked = false;
+            setState(labelFor(worldChange.currentReason(client)), colorOffArgb, false, false);
             worldChange.countDownDisplayTick();
             return;
         }
@@ -163,17 +155,12 @@ public final class SprintHud {
         textOff = Component.literal(config.text.textOff.get());
         textJoining = Component.literal(config.text.textJoining.get());
         textTerrain = Component.literal(config.text.textTerrain.get());
+        textUnknown = Component.literal(config.text.textUnknown.get());
+        String blockedFormat = config.text.textBlockedFormat.get();
         blockedText.clear();
-        blockedText.put(SprintBlocker.NOT_MOVING, Component.literal(config.reasons.reasonStanding.get()));
-        blockedText.put(SprintBlocker.RESTRICTED, Component.literal(config.reasons.reasonRestricted.get()));
-        blockedText.put(SprintBlocker.IN_VEHICLE, Component.literal(config.reasons.reasonVehicle.get()));
-        blockedText.put(SprintBlocker.TOO_HUNGRY, Component.literal(config.reasons.reasonHungry.get()));
-        blockedText.put(SprintBlocker.SHALLOW_WATER, Component.literal(config.reasons.reasonShallowWater.get()));
-        blockedText.put(SprintBlocker.USING_ITEM, Component.literal(config.reasons.reasonUsingItem.get()));
-        blockedText.put(SprintBlocker.ELYTRA, Component.literal(config.reasons.reasonElytra.get()));
-        blockedText.put(SprintBlocker.SNEAKING, Component.literal(config.reasons.reasonSneaking.get()));
-        blockedText.put(SprintBlocker.CRAWLING, Component.literal(config.reasons.reasonSlow.get()));
-        blockedText.put(SprintBlocker.HIT_WALL, Component.literal(config.reasons.reasonWall.get()));
+        for (SprintBlocker reason : SprintBlocker.values()) {
+            blockedText.put(reason, Component.literal(blockedFormat.replace("%s", reasonLabel(reason).get())));
+        }
         fixedTextWidthCache = null;
         widthCheckedAt = 0;
     }
@@ -182,35 +169,31 @@ public final class SprintHud {
         LocalPlayer player = client.player;
 
         if (!sprintEnabled) {
-            text = textOff;
-            color = colorOffArgb;
-            blocked = false;
+            setState(textOff, colorOffArgb, false, false);
         } else if (player == null) {
-            text = textOn;
-            color = colorOffArgb;
-            blocked = false;
+            setState(textOn, colorOffArgb, false, false);
         } else if (player.isSprinting()) {
-            text = textOn;
-            color = colorOnArgb;
-            blocked = false;
+            setState(textOn, colorOnArgb, true, false);
         } else {
             SprintBlocker reason = SprintBlocker.whyNotSprinting(player);
             if (reason != null) {
-                text = blockedText.get(reason);
-                color = colorBlockedArgb;
-                blocked = true;
+                setState(blockedText.get(reason), colorBlockedArgb, false, true);
             } else {
-                text = textOn;
-                color = colorOnArgb;
-                blocked = false;
+                setState(textUnknown, colorBlockedArgb, false, true);
             }
         }
-        stateOn = color == colorOnArgb;
 
         if (text != lastText) {
             lastText = text;
             onChangeTicks = ON_CHANGE_TICKS;
         }
+    }
+
+    private void setState(Component text, int color, boolean sprinting, boolean blocked) {
+        this.text = text;
+        this.color = color;
+        this.stateOn = sprinting;
+        this.blocked = blocked;
     }
 
     public boolean isSettling() {
@@ -248,6 +231,7 @@ public final class SprintHud {
             int w = Math.max(font.width(textOn), font.width(textOff));
             w = Math.max(w, font.width(textJoining));
             w = Math.max(w, font.width(textTerrain));
+            w = Math.max(w, font.width(textUnknown));
             for (Component component : blockedText.values()) {
                 w = Math.max(w, font.width(component));
             }
@@ -255,6 +239,22 @@ public final class SprintHud {
             widthCheckedAt = now;
         }
         return fixedTextWidthCache;
+    }
+
+    private ValidatedString reasonLabel(SprintBlocker reason) {
+        MitrasConfig.ReasonSection reasons = config.reasons;
+        return switch (reason) {
+            case NOT_MOVING -> reasons.reasonStanding;
+            case RESTRICTED -> reasons.reasonRestricted;
+            case IN_VEHICLE -> reasons.reasonVehicle;
+            case TOO_HUNGRY -> reasons.reasonHungry;
+            case SHALLOW_WATER -> reasons.reasonShallowWater;
+            case USING_ITEM -> reasons.reasonUsingItem;
+            case ELYTRA -> reasons.reasonElytra;
+            case SNEAKING -> reasons.reasonSneaking;
+            case CRAWLING -> reasons.reasonSlow;
+            case HIT_WALL -> reasons.reasonWall;
+        };
     }
 
     void drawAt(GuiGraphicsExtractor graphics, int x, int y) {
@@ -298,61 +298,50 @@ public final class SprintHud {
     }
 
     private Component cyclingText;
-    private String cyclingTextString;
+    private Font cyclingLayoutFont;
+    private String[] cyclingGlyphs = new String[0];
+    private int[] cyclingGlyphWidths = new int[0];
+    private int cyclingGlyphCount;
     private Component laidOutText;
     private int laidOutForWidth;
     private int laidOutTextOffset;
 
     private void drawCyclingText(GuiGraphicsExtractor graphics, Font font, int x, boolean chroma) {
-        if (text != cyclingText) {
+        if (text != cyclingText || cyclingLayoutFont != font) {
             cyclingText = text;
-            cyclingTextString = text.getString();
+            buildCyclingLayout(font);
         }
-        String string = cyclingTextString;
-        int length = string.length();
-        if (length == 0) {
+        int count = cyclingGlyphCount;
+        if (count == 0) {
             return;
         }
         int hueBase = (int) (Util.getMillis() % HUE_CYCLE_MS * HUE_STEPS / HUE_CYCLE_MS);
         boolean shadow = config.hud.hudTextShadow;
         int charX = x;
-        for (int i = 0; i < length; i++) {
-            char c = string.charAt(i);
-            int width = glyphWidth(font, c);
-            if (c != ' ') {
-                int hue = chroma ? (hueBase + i * CHROMA_CHAR_SPREAD_DEGREES) % HUE_STEPS : hueBase;
-                graphics.text(font, glyph(c), charX, 0, HUE_LUT[hue], shadow);
-            }
-            charX += width;
+        for (int g = 0; g < count; g++) {
+            int hue = chroma ? (hueBase + g * CHROMA_CHAR_SPREAD_DEGREES) % HUE_STEPS : hueBase;
+            graphics.text(font, cyclingGlyphs[g], charX, 0, HUE_LUT[hue], shadow);
+            charX += cyclingGlyphWidths[g];
         }
     }
 
-    private static String glyph(char c) {
-        if (c >= GLYPH_CACHE_SIZE) {
-            return String.valueOf(c);
+    private void buildCyclingLayout(Font font) {
+        String string = text.getString();
+        int count = string.codePointCount(0, string.length());
+        if (cyclingGlyphs.length < count) {
+            cyclingGlyphs = new String[count];
+            cyclingGlyphWidths = new int[count];
         }
-        String cached = GLYPH_CACHE[c];
-        if (cached == null) {
-            cached = String.valueOf(c);
-            GLYPH_CACHE[c] = cached;
+        cyclingGlyphCount = count;
+        int index = 0;
+        for (int g = 0; g < count; g++) {
+            int codePoint = string.codePointAt(index);
+            String glyph = new String(Character.toChars(codePoint));
+            cyclingGlyphs[g] = glyph;
+            cyclingGlyphWidths[g] = font.width(glyph);
+            index += Character.charCount(codePoint);
         }
-        return cached;
-    }
-
-    private static int glyphWidth(Font font, char c) {
-        if (c >= GLYPH_CACHE_SIZE) {
-            return font.width(glyph(c));
-        }
-        if (glyphCacheFont != font) {
-            Arrays.fill(GLYPH_WIDTH_CACHE, -1);
-            glyphCacheFont = font;
-        }
-        int cached = GLYPH_WIDTH_CACHE[c];
-        if (cached < 0) {
-            cached = font.width(glyph(c));
-            GLYPH_WIDTH_CACHE[c] = cached;
-        }
-        return cached;
+        cyclingLayoutFont = font;
     }
 
     static int clampToScreen(int position, int screenSize, int elementSize) {

@@ -84,6 +84,8 @@
   "mitrasautosprinter.mitrasautosprinter.text.textTerrain.desc": "Text shown briefly while waiting for terrain, e.g. after a teleport.",
   "mitrasautosprinter.mitrasautosprinter.text.textBlockedFormat": "Blocked Format",
   "mitrasautosprinter.mitrasautosprinter.text.textBlockedFormat.desc": "%s is replaced with the reason the sprint is blocked.",
+  "mitrasautosprinter.mitrasautosprinter.text.textUnknown": "Unknown Reason Label",
+  "mitrasautosprinter.mitrasautosprinter.text.textUnknown.desc": "Shown when something is blocking the sprint that this mod does not recognize, e.g. after a Minecraft update adds a new sprint restriction.",
   "mitrasautosprinter.mitrasautosprinter.reasons": "Blocked Reasons",
   "mitrasautosprinter.mitrasautosprinter.reasons.desc": "The text shown for each reason the sprint can be blocked. These fill in the Blocked Format label.",
   "mitrasautosprinter.mitrasautosprinter.reasons.reasonStanding": "Not Moving",

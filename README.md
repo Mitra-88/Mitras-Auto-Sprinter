@@ -2,89 +2,48 @@
 
 <img src="images/preview.webp" width="768" height="432" alt="Preview">
 
-Press **K** (or a key you choose) to toggle auto-sprint on or off. When you can't sprint, the HUD shows why.
+Press **K** to turn on auto-sprint. Then just hold `W`, and you run without ever touching the sprint key. When something stops you from sprinting, the little HUD tells you why.
 
 Also fixes [MC-263293](https://bugs.mojang.com/browse/MC/issues/MC-263293), where the game forgets your sprint toggle after dying or changing worlds.
 
-## Features
+## Quick start
 
-- Auto-sprint: hold `W` and you run automatically.
-- Toggle key: default is `K`, rebindable in Controls.
-- HUD states:
-    - **Sprint ON** (green): sprinting.
-    - **Sprint OFF** (gray): auto-sprint disabled.
-    - **Sprint OFF (*reason*)** (yellow): auto-sprint is enabled but something is blocking it (hunger, sneaking, wall, etc.), with the reason shown.
-- Two display modes: text, or the speed-effect icon.
-- Animated text colors: solid, rainbow (whole label cycles), or chroma (per-letter wave).
-- Positioning: presets (top/bottom, left/center/right) or drag-to-place with the built-in editor.
-- Show/hide rules: always on screen, only when blocked, or only briefly on change.
-- HUD text, colors, and blocked-reason messages are configurable.
-- Client-side only: completely safe for multiplayer.
-- *Tiny footprint: only ~1000 lines of Java code
+1. Install [Fabric Loader](https://fabricmc.net/), [Fabric API](https://modrinth.com/mod/fabric-api), and [Fzzy Config](https://modrinth.com/mod/fzzy-config). [Mod Menu](https://modrinth.com/mod/modmenu) is optional but recommended, it's how you get to the settings.
+2. Drop the mod's `.jar` into your `mods` folder.
+3. Launch the game and join any world or server.
+4. Press **K**, then hold `W`.
 
-## Requirements
+Press **K** again to turn it off. Your setting is remembered between sessions (it starts off the first time). Supported Minecraft versions are listed on the [Modrinth page](https://modrinth.com/mod/mitras-auto-sprinter) and the [GitHub releases](https://github.com/Mitra-88/Mitras-Auto-Sprinter).
 
-- [Fabric Loader](https://fabricmc.net/)
-- [Fabric API](https://modrinth.com/mod/fabric-api)
-- [Fzzy Config](https://modrinth.com/mod/fzzy-config)
-- [Mod Menu](https://modrinth.com/mod/modmenu) optional but is recommended for access to the config screen.
+## What you'll see
 
-Supported Minecraft versions are listed on the [Modrinth page](https://modrinth.com/mod/mitras-auto-sprinter) and the [GitHub releases](https://github.com/Mitra-88/Mitras-Auto-Sprinter).
+- **Sprint ON** (green): sprinting.
+- **Sprint OFF** (gray): auto-sprint is off.
+- **Sprint OFF (*reason*)** (yellow): auto-sprint is on, but something is blocking it: *Not Moving*, *Too Hungry*, *Sneaking*, *In Vehicle*, *Shallow Water*, *Using Item*, *Flying* (elytra), *Crawling*, *Hit Wall*, *Restricted*, or *Unknown Reason* on a Minecraft version this mod hasn't learned yet.
+- **Joining... / Loading terrain...** (gray): shown briefly after joining or teleporting, until the world is ready.
 
-## Usage
+Prefer no text? Icon mode replaces it with the speed-effect icon, bright while sprinting and faded when not.
 
-1. Put the `.jar` file in your `mods` folder.
-2. Launch the game and join a world or server.
-3. Press **K** (or your custom toggle key).
-4. Hold `W` to sprint automatically.
-
-Press **K** again to turn it off. The setting persists between sessions but starts off the first time you play.
-
-Keybindings: **Options → Controls → Mitra's Auto Sprinter**.
-
-## HUD reference
-
-- **Sprint ON** (green): running.
-- **Sprint OFF** (gray): mod disabled.
-- **Sprint OFF (*reason*)** (yellow): enabled but blocked. Possible reasons: *Not Moving*, *Restricted*, *In Vehicle*, *Too Hungry*, *Shallow Water*, *Using Item*, *Flying* (elytra), *Sneaking*, *Crawling*, *Hit Wall*.
-- **Joining...** / **Loading terrain...** (gray): shown briefly after joining or teleporting, until the world is ready.
-
-Icon mode replaces the text with the speed-effect icon, bright when sprinting and faded when not.
-
-Default position is top-center, below the boss bar. This can be changed.
+By default, the HUD sits top-center under the boss bar. You can put it anywhere.
 
 ## Moving and resizing the HUD
 
-1. Set a key for the HUD editor in **Controls** (unbound by default), or use the *Open HUD Editor* button in the config screen.
-2. Press that key in-game to open the editor.
-3. Drag the HUD box to a new position.
-4. Press **ESC** to save.
+Bind the **HUD editor** key in **Options → Controls → Mitra's Auto Sprinter** (unbound by default), or use the *Open HUD Editor* button in the config screen. Press it in-game, then:
 
-In the editor:
+- **Drag** the HUD to move it. It snaps to the screen edges, center lines, its default spot, and the safe area above the hotbar. Hold **Ctrl** to drag freely.
+- **Mouse wheel** or **+** / **-** to resize.
+- **Arrow keys** nudge it 1 pixel; **Shift + arrows** in bigger steps.
+- **Double-click** to center it horizontally.
+- **G** toggles an 8-pixel alignment grid, **R** resets the position.
+- **ESC** saves everything.
 
-- Hover over the HUD and press **R** to reset its position.
-- Resize with the mouse wheel or `+`/`-` (numpad works too) — the icon in Icon mode, the text in Text mode.
-- **Arrow keys** nudge the HUD by 1 pixel; **Shift+Arrows** move in bigger steps (10, or the grid size when grid snapping is on).
-- **Double-click** the HUD to center it horizontally.
-- While dragging, the HUD snaps to the screen edges, the horizontal and vertical center lines, the default top position, and the safe area above the bottom HUD. Snapping aligns what you see (the background box counts when it's enabled), and a magenta guide line appears while snapped.
-- Press **G** to toggle grid snapping — an 8-pixel grid, drawn faintly with brighter lines every 32 pixels.
-- Hold **Ctrl** while dragging to move freely without snapping (nudging with the arrow keys is always snap-free).
-- The HUD's exact position (in GUI pixels) is shown above it while dragging.
+## Settings
 
-## Configuration
+Most things live on the keybind and HUD editor above. For everything else: **Mod Menu → Mitra's Auto Sprinter → Configure**. There you'll find show/hide rules (always / only when blocked / flash on change), text vs icon mode, background, shadow, scales, solid / rainbow / chroma text colors, and the text of every label the HUD can show, blocked reasons included.
 
-The keybind and editor cover most use cases, but further settings are available via **Mod Menu → Mitra's Auto Sprinter → Configure**:
+## Is it safe?
 
-- **Sprint**: master on/off switch.
-- **HUD**: visibility, background box (Text mode only), display mode (Text/Icon), show mode (Always/Blocked only/On change), position, text shadow, icon scale, text scale, text color mode (Solid/Rainbow/Chroma), and colors for ON/OFF/Blocked states plus background. Text scale, solid colors, and the color mode itself only apply in Text mode.
-- **Labels**: text for *Sprint ON*, *Sprint OFF*, *Joining...*, *Loading terrain...*, and the blocked-message format (`%s` marks where the reason goes).
-- **Blocked Reasons**: text for each of the 10 blocking reasons.
-
-## Server use
-
-The mod holds the sprint key for you, equivalent to taping the key down or using the vanilla toggle-sprint option.
-
-All vanilla sprint restrictions still apply: sneaking, eating, elytra flight, shallow water, etc. all stop sprinting as normal, and hitting a wall stops it too.
+Yes. It's client-side only, nothing is ever sent to servers, and every vanilla sprint rule still applies. The plain-English explanation (and how to verify it yourself) is in [PROOF.md](PROOF.md).
 
 ## Links
 

@@ -58,8 +58,8 @@ public final class MitrasConfig extends Config {
         private final ValidatedDouble iconScaleField = new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedDouble textScaleField = new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedBoolean hudBackgroundField = new ValidatedBoolean(false);
-        private final ValidatedDouble hudXField = new ValidatedDouble(0.01, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
-        private final ValidatedDouble hudYField = new ValidatedDouble(0.01, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
+        private final ValidatedDouble hudXField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
+        private final ValidatedDouble hudYField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
         private final ValidatedEnum<TextColorMode> textColorModeEnum = new ValidatedEnum<>(TextColorMode.SOLID, ValidatedEnum.WidgetType.CYCLING);
 
         @SuppressWarnings("unused")
@@ -78,11 +78,11 @@ public final class MitrasConfig extends Config {
         public ValidatedEnum<HudAnchor> hudAnchor = new ValidatedEnum<>(HudAnchor.AUTO_CENTER_TOP, ValidatedEnum.WidgetType.SCROLLABLE);
         public ValidatedCondition<Double> hudX = new ValidatedCondition<>(
                 hudXField,
-                new ValidatedDouble(0.01, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX))
+                new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX))
                 .withCondition(REQUIRES_CUSTOM_ANCHOR, () -> hudAnchor.get() == HudAnchor.CUSTOM);
         public ValidatedCondition<Double> hudY = new ValidatedCondition<>(
                 hudYField,
-                new ValidatedDouble(0.01, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX))
+                new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX))
                 .withCondition(REQUIRES_CUSTOM_ANCHOR, () -> hudAnchor.get() == HudAnchor.CUSTOM);
         public ValidatedCondition<Double> hudIconScale = new ValidatedCondition<>(
                 iconScaleField,
@@ -131,6 +131,7 @@ public final class MitrasConfig extends Config {
         public ValidatedString textJoining = new ValidatedString("Joining...");
         public ValidatedString textTerrain = new ValidatedString("Loading terrain...");
         public ValidatedString textBlockedFormat = new ValidatedString("Sprint OFF - %s");
+        public ValidatedString textUnknown = new ValidatedString("Unknown Reason");
     }
 
     public static class ReasonSection extends ConfigSection {
