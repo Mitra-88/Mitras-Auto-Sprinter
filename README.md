@@ -15,7 +15,9 @@ Also fixes [MC-263293](https://bugs.mojang.com/browse/MC/issues/MC-263293), wher
 3. Launch the game and join any world or server.
 4. Press **K**, then hold `W`.
 
-Press **K** again to turn it off. Your setting is remembered between sessions (it starts off the first time). Supported Minecraft versions are listed on the [Modrinth page](https://modrinth.com/mod/mitras-auto-sprinter) and the [GitHub releases](https://github.com/Mitra-88/Mitras-Auto-Sprinter).
+Press **K** again to turn it off. Your setting is remembered between sessions (it starts off the first time).
+
+Supported Minecraft versions are listed on the [Modrinth page](https://modrinth.com/mod/mitras-auto-sprinter). The GitHub releases sometimes lag behind (I'm lazy about updating them), so Modrinth is the safer bet.
 
 ## What you'll see
 
