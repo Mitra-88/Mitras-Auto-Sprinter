@@ -1,6 +1,6 @@
 # Is this mod safe?
 
-Hey, I made this mod. And since "trust me bro" isn't a real answer, here's exactly what it does, what it doesn't do, and how you can check my claims yourself. (If your brain can't stop overthinking just like me lol)
+Since "trust me bro" isn't a real answer, here's exactly what it does, what it doesn't do, and how you can check my claims yourself. (If your brain can't stop overthinking just like me lol)
 
 ## "Will this get me banned?"
 
