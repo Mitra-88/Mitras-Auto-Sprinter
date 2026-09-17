@@ -2,7 +2,9 @@
 
 <img src="images/preview.webp" width="768" height="432" alt="Preview">
 
-Press **K** to turn on auto-sprint. Then just hold `W`, and you run without ever touching the sprint key. When something stops you from sprinting, the little HUD tells you why.
+Press **K** to turn auto-sprint on or off. While it's on, you sprint automatically whenever you hold `W`. If something blocks the sprint, the HUD shows the reason.
+
+Made with Hypixel Skyblock in mind, but it works anywhere, singleplayer and servers alike.
 
 Also fixes [MC-263293](https://bugs.mojang.com/browse/MC/issues/MC-263293), where the game forgets your sprint toggle after dying or changing worlds.
 
@@ -22,7 +24,7 @@ Press **K** again to turn it off. Your setting is remembered between sessions (i
 - **Sprint OFF (*reason*)** (yellow): auto-sprint is on, but something is blocking it: *Not Moving*, *Too Hungry*, *Sneaking*, *In Vehicle*, *Shallow Water*, *Using Item*, *Flying* (elytra), *Crawling*, *Hit Wall*, *Restricted*, or *Unknown Reason* on a Minecraft version this mod hasn't learned yet.
 - **Joining... / Loading terrain...** (gray): shown briefly after joining or teleporting, until the world is ready.
 
-Prefer no text? Icon mode replaces it with the speed-effect icon, bright while sprinting and faded when not.
+Icon mode replaces the text with the speed-effect icon, bright while sprinting and faded when not.
 
 By default, the HUD sits top-center under the boss bar. You can put it anywhere.
 

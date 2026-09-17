@@ -6,6 +6,8 @@ Hey, I made this mod. And since "trust me bro" isn't a real answer, here's exact
 
 Short answer: no. Slightly longer answer: the mod never sends anything to any server, so there's nothing for an anticheat to see. When you sprint, Minecraft itself sends its normal "this player is sprinting" signal, the exact same one it sends when you press Ctrl yourself. The mod adds nothing on top. To a server, you're just a player holding Ctrl.
 
+I mainly built this for Hypixel Skyblock, about as strict a server as they come, and it's built to stay on the right side of that line. But it works the same anywhere.
+
 (Every server makes its own rules, obviously. But there's genuinely nothing hidden here, so keep reading.)
 
 ## What this mod actually does
