@@ -1,0 +1,140 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'idea'
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"mitrasautosprinter" {
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+repositories {
+	maven {
+		name = "FzzyMaven"
+		url = uri("https://maven.fzzyhmstrs.me/")
+	}
+	maven {
+		name = "TerraformersMC"
+		url = uri("https://maven.terraformersmc.com/releases/")
+	}
+	mavenCentral()
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	implementation "me.fzzyhmstrs:fzzy_config:${project.fzzy_config_version}"
+	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+}
+
+idea {
+	module {
+		downloadSources = true
+		downloadJavadoc = true
+	}
+}
+
+tasks.register('extractAgentSources') {
+	group = 'documentation'
+	description = 'Extracts all dependency and Minecraft source jars into agent_sources/src for plain-text reading (opt-in via -PagentSources, or run this task directly).'
+
+	def outputDir = layout.projectDirectory.dir('agent_sources/src')
+	outputs.dir(outputDir)
+	outputs.upToDateWhen { false }
+	dependsOn tasks.named('genSources')
+
+	doLast {
+		def moduleIds = configurations.compileClasspath.incoming.resolutionResult
+				.allComponents
+				.collect { it.moduleVersion }
+				.findAll { it != null }
+				.collect { "${it.group}:${it.name}:${it.version}" }
+				.unique()
+		def sourcesConfig = configurations.detachedConfiguration(
+				moduleIds.collect { dependencies.create("${it}:sources") } as Dependency[]
+		)
+		sourcesConfig.transitive = false
+		def sourceJars = sourcesConfig.resolvedConfiguration.lenientConfiguration
+				.artifacts*.file
+
+		def minecraftSourceJars = [
+				layout.projectDirectory.dir('.gradle/loom-cache/minecraftMaven').asFile,
+				new File(gradle.gradleUserHomeDir, 'caches/fabric-loom/minecraftMaven'),
+		].collectMany { cacheDir ->
+			fileTree(cacheDir) { include "**/*${project.minecraft_version}-sources.jar" }.files
+		}
+
+		def output = outputDir.asFile
+		delete(output)
+		output.mkdirs()
+
+		def jars = (sourceJars + minecraftSourceJars)
+				.findAll { it.name.endsWith('-sources.jar') }
+				.unique { it.name }
+		jars.each { jar ->
+			println "extractAgentSources: ${jar.name}"
+			copy {
+				from(zipTree(jar)) {
+					include '**/*.java'
+				}
+				into(output)
+				duplicatesStrategy = DuplicatesStrategy.INCLUDE
+			}
+		}
+		println "extractAgentSources: extracted ${jars.size()} source jars into ${output}"
+	}
+}
+
+tasks.named('build') {
+	dependsOn tasks.named('genSources')
+	if (providers.gradleProperty('agentSources').isPresent()) {
+		dependsOn tasks.named('extractAgentSources')
+	}
+}
+
+tasks.named('idea') {
+	dependsOn tasks.named('genSources')
+}
+
+def genSourcesTasks = tasks.matching { it.name == 'genSources' || it.name.endsWith('SourcesWithVineflower') }
+
+['compileJava'].each { taskName ->
+	tasks.named(taskName) { dependsOn genSourcesTasks }
+}
+
+def modVersion = project.version.toString()
+
+tasks.withType(ProcessResources).configureEach {
+	inputs.property "version", modVersion
+
+	filesMatching("fabric.mod.json") {
+		expand "version": modVersion
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	archiveVersion = "${project.version}-fabric-mc${project.minecraft_version}"
+
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+}
