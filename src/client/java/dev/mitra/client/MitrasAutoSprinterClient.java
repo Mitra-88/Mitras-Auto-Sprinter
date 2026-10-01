@@ -30,13 +30,13 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
 
     private static final KeyMapping TOGGLE_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.mitrasautosprinter.toggle",
-            InputConstants.Type.KEYSYM,
+            InputConstants.Type.KEYBOARD,
             InputConstants.KEY_K,
             KEY_CATEGORY));
 
     private static final KeyMapping HUD_EDITOR_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.mitrasautosprinter.hud_editor",
-            InputConstants.Type.KEYSYM,
+            InputConstants.Type.KEYBOARD,
             -1,
             KEY_CATEGORY));
 

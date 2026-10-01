@@ -2,7 +2,7 @@
 
 ## What this is
 
-A **client-only Fabric mod** (mod id `mitrasautosprinter`, package `dev.mitra.client`) for **Minecraft 26.2**, Java **25**, Fabric Loader 0.19.3, Loom 1.17.20, Gradle 9.7.1. While toggled on (default key **K**) it holds the vanilla sprint key for you — equivalent to taping the key down or vanilla toggle-sprint — and draws a HUD that explains *why* you aren't sprinting (hunger, sneaking, wall, …). Also works around [MC-263293](https://bugs.mojang.com/browse/MC/issues/MC-263293) (sprint state forgotten after dying/changing worlds). Config UI is **Fzzy Config** 0.7.7+26.2 (ModMenu ≥20.0.2 is suggested but optional; Fzzy provides the screen). ~1228 lines of Java, CC0-1.0, published on Modrinth + GitHub releases.
+A **client-only Fabric mod** (mod id `mitrasautosprinter`, package `dev.mitra.client`) for **Minecraft 26.3**, Java **25**, Fabric Loader 0.19.3, Loom 1.17.20, Gradle 9.7.1. While toggled on (default key **K**) it holds the vanilla sprint key for you — equivalent to taping the key down or vanilla toggle-sprint — and draws a HUD that explains *why* you aren't sprinting (hunger, sneaking, wall, …). Also works around [MC-263293](https://bugs.mojang.com/browse/MC/issues/MC-263293) (sprint state forgotten after dying/changing worlds). Config UI is **Fzzy Config** 0.7.7+26.3 (ModMenu ≥21.0.0 is suggested but optional; Fzzy provides the screen). ~1228 lines of Java, CC0-1.0, published on Modrinth + GitHub releases.
 
 **HARD REQUIREMENT — 100% client-side.** The mod's only "action" is calling `client.options.keySprint.setDown(true)` locally. It must never send packets or commands, never automate movement, and never be observable by the server in any way. All vanilla sprint restrictions still apply and are only *reported*, never bypassed. Push back on any request that would change this.
 
@@ -14,7 +14,7 @@ A **client-only Fabric mod** (mod id `mitrasautosprinter`, package `dev.mitra.cl
 ```
 
 - No test sourceset exists; `./gradlew build` is the only verification gate — run it before finishing any change.
-- Jar output: `build/libs/mitrasautosprinter-<version>-fabric-mc26.2.jar` (the `version` in `gradle.properties` is expanded into `fabric.mod.json` at process-resources time).
+- Jar output: `build/libs/mitrasautosprinter-<version>-fabric-mc26.3.jar` (the `version` in `gradle.properties` is expanded into `fabric.mod.json` at process-resources time).
 - CI (`.github/workflows/build.yml`) builds on every push to `master` (Zulu JDK 25) and, only while `releaseDevBuilds=true` in `gradle.properties`, recreates the `nightly` prerelease with generated notes + file hashes. Dependabot maintains the dependency versions.
 - `run/` is a scratch Minecraft instance (gitignored) — don't treat its contents as source.
 
@@ -79,10 +79,10 @@ All code lives in `src/client/java/dev/mitra/client/` (Loom `splitEnvironmentSou
 ## Where to look things up
 
 - **`docs-for-agents/` (project root, gitignored)** — the local reference cache: clones of the Fabric and Fzzy Config repositories, ModMenu, and downloaded Fabric/Fzzy documentation. Reference material only, never part of the mod. Check here first for library/API questions; if something isn't there, fall back to the sources jars below.
-- **Minecraft 26.2, Mojang mappings** — mapped jar: `C:\Users\Mitra\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged-deobf\26.2\minecraft-merged-deobf-26.2.jar`. For full decompiled sources run `./gradlew genSources`, which writes `minecraft-clientOnly-…-26.2-sources.jar` and `minecraft-common-…-26.2-sources.jar` under the project's `.gradle/loom-cache/minecraftMaven/` (path contains a content hash, so glob for `*sources.jar`). The user-home cache `…\fabric-loom\decompile\v1.zip` also holds decompiled sources, but entries are keyed by content hash with a binary `LOOM NAME` header — you cannot look files up by class path; extract wholesale and grep by content if you must.
+- **Minecraft 26.3, Mojang mappings** — mapped jar: `C:\Users\Mitra\.gradle\caches\fabric-loom\minecraftMaven\net\minecraft\minecraft-merged-deobf\26.3\minecraft-merged-deobf-26.3.jar`. For full decompiled sources run `./gradlew extractAgentSources` (unpacks them, plus every dependency's sources, into `agent_sources/src/`), which writes `minecraft-clientOnly-…-26.3-sources.jar` and `minecraft-common-…-26.3-sources.jar` under the project's `.gradle/loom-cache/minecraftMaven/` (path contains a content hash, so glob for `*sources.jar`). The user-home cache `…\fabric-loom\decompile\v1.zip` also holds decompiled sources, but entries are keyed by content hash with a binary `LOOM NAME` header — you cannot look files up by class path; extract wholesale and grep by content if you must.
 - **Library sources jars** under `C:\Users\Mitra\.gradle\caches\modules-2\files-2.1\<group>\<artifact>\<version>\<sha1>\` (grab the `*-sources.jar` in the `<sha1>` folder):
-    - `me.fzzyhmstrs\fzzy_config\0.7.7+26.2\` — the config API (`ValidatedCondition`, `EnumTranslatable`, …). Fzzy Config is niche; its sources are more reliable than anything online.
-    - `net.fabricmc.fabric-api\fabric-api\0.160.0+26.2\` — events, keymapping helpers, HUD registry.
+    - `me.fzzyhmstrs\fzzy_config\0.7.7+26.3\` — the config API (`ValidatedCondition`, `EnumTranslatable`, …). Fzzy Config is niche; its sources are more reliable than anything online.
+    - `net.fabricmc.fabric-api\fabric-api\0.161.0+26.3\` — events, keymapping helpers, HUD registry.
 - Official Fabric docs: https://docs.fabricmc.net/ (mostly pre-26.x; this repo's own code is the best 26.x API reference).
 
 ## RTK

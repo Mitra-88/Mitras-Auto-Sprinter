@@ -8,7 +8,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.NonNull;
-import org.lwjgl.glfw.GLFW;
 
 import dev.mitra.client.config.HudAnchor;
 
@@ -16,6 +15,8 @@ import static dev.mitra.client.config.MitrasConfig.MAX_SCALE;
 import static dev.mitra.client.config.MitrasConfig.MIN_SCALE;
 
 public final class HudEditorScreen extends Screen {
+
+    private static final int KEY_KEYPAD_SUBTRACT = 86;
 
     private static final Component INSTRUCTIONS_MAIN =
             Component.translatable("hud.mitrasautosprinter.editor.instructions");
@@ -116,19 +117,19 @@ public final class HudEditorScreen extends Screen {
         }
         int step = event.hasShiftDown() ? (gridEnabled ? GRID_SIZE : NUDGE_LARGE_STEP) : 1;
         switch (event.key()) {
-            case GLFW.GLFW_KEY_LEFT -> {
+            case InputConstants.KEY_LEFT -> {
                 nudge(-step, 0);
                 return true;
             }
-            case GLFW.GLFW_KEY_RIGHT -> {
+            case InputConstants.KEY_RIGHT -> {
                 nudge(step, 0);
                 return true;
             }
-            case GLFW.GLFW_KEY_UP -> {
+            case InputConstants.KEY_UP -> {
                 nudge(0, -step);
                 return true;
             }
-            case GLFW.GLFW_KEY_DOWN -> {
+            case InputConstants.KEY_DOWN -> {
                 nudge(0, step);
                 return true;
             }
@@ -144,7 +145,7 @@ public final class HudEditorScreen extends Screen {
                 return true;
             }
             if (event.key() == InputConstants.KEY_MINUS
-                    || event.key() == GLFW.GLFW_KEY_KP_SUBTRACT) {
+                    || event.key() == KEY_KEYPAD_SUBTRACT) {
                 changeScale(-SCALE_STEP);
                 return true;
             }
