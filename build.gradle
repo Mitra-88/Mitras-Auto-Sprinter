@@ -1,3 +1,8 @@
+import org.gradle.api.attributes.Bundling
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.DocsType
+import org.gradle.api.attributes.Usage
+
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
@@ -28,6 +33,64 @@ dependencies {
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	implementation "me.fzzyhmstrs:fzzy_config:${project.fzzy_config_version}"
+}
+
+tasks.register('extractAgentSources') {
+	group = 'documentation'
+	description = 'Extracts dependency + Minecraft source jars into agent_sources/src (skips all disk writes if nothing changed).'
+
+	def outputDir = layout.projectDirectory.dir('agent_sources/src').asFile
+	def stampFile = new File(outputDir, '.stamp')
+	def sourceJars = configurations.compileClasspath.incoming.artifactView {
+		withVariantReselection()
+		lenient = true
+		attributes {
+			attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+			attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.DOCUMENTATION))
+			attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+			attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType, DocsType.SOURCES))
+		}
+	}.files
+	def mcSourceJars = [
+			fileTree(layout.projectDirectory.dir('.gradle/loom-cache/minecraftMaven')) { include "**/*${project.minecraft_version}-sources.jar" },
+			fileTree(new File(gradle.gradleUserHomeDir, 'caches/fabric-loom/minecraftMaven')) { include "**/*${project.minecraft_version}-sources.jar" },
+	]
+	outputs.dir(outputDir)
+	outputs.upToDateWhen { false }
+	dependsOn tasks.named('genSources')
+
+	doLast {
+		def jars = (sourceJars.files + mcSourceJars.collectMany { it.files })
+				.findAll { it.name.endsWith('-sources.jar') }
+				.unique { it.name }
+				.sort { it.name }
+		def fingerprint = jars.collect { "${it.name}:${it.length()}" }.join('\n')
+		if (stampFile.exists() && stampFile.text == fingerprint) {
+			println "extractAgentSources: up to date (${jars.size()} jars), nothing written"
+			return
+		}
+		outputDir.deleteDir()
+		outputDir.mkdirs()
+		jars.each { jar ->
+			new java.util.zip.ZipFile(jar).withCloseable { zip ->
+				zip.entries().each { entry ->
+					if (entry.isDirectory() || !(entry.name.endsWith('.java') || entry.name.endsWith('.kt'))) {
+						return
+					}
+					def target = new File(outputDir, entry.name)
+					if (!target.canonicalPath.startsWith(outputDir.canonicalPath + File.separator)) {
+						return
+					}
+					target.parentFile.mkdirs()
+					target.withOutputStream { out ->
+						out << zip.getInputStream(entry)
+					}
+				}
+			}
+		}
+		stampFile.text = fingerprint
+		println "extractAgentSources: extracted ${jars.size()} source jars into ${outputDir}"
+	}
 }
 
 def modVersion = project.version.toString()
