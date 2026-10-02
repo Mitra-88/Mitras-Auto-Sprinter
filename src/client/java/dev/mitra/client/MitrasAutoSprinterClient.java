@@ -1,11 +1,15 @@
 package dev.mitra.client;
 
+import com.mojang.brigadier.Command;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.mitra.client.config.MitrasConfig;
 import dev.mitra.client.hud.HudEditorScreen;
 import dev.mitra.client.hud.SprintHud;
 import dev.mitra.client.sprint.AutoSprint;
+import me.fzzyhmstrs.fzzy_config.api.ConfigApiJava;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -59,6 +63,15 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
                     }
                 });
             }
+        });
+
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, _) -> {
+            dispatcher.register(
+                    ClientCommands.literal("mitrasautosprinter")
+                            .executes(_ -> {
+                                ConfigApiJava.INSTANCE.openScreen(MOD_ID);
+                                return Command.SINGLE_SUCCESS;
+                            }));
         });
 
         ClientTickEvents.START_CLIENT_TICK.register(sprint::startClientTick);
