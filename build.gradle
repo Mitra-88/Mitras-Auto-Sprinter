@@ -1,7 +1,4 @@
-import org.gradle.api.attributes.Bundling
-import org.gradle.api.attributes.Category
-import org.gradle.api.attributes.DocsType
-import org.gradle.api.attributes.Usage
+import java.util.zip.ZipFile
 
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
@@ -61,21 +58,25 @@ tasks.register('extractAgentSources') {
 	dependsOn tasks.named('genSources')
 
 	doLast {
-		def jars = (sourceJars.files + mcSourceJars.collectMany { it.files })
+		def jars = (sourceJars.files + (mcSourceJars.collectMany { it.files } as Collection<File>))
 				.findAll { it.name.endsWith('-sources.jar') }
-				.unique { it.name }
+				.unique { it.absolutePath }
 				.sort { it.name }
-		def fingerprint = jars.collect { "${it.name}:${it.length()}" }.join('\n')
+		def fingerprint = jars.collect { "${it.absolutePath}:${it.length()}" }.join('\n')
 		if (stampFile.exists() && stampFile.text == fingerprint) {
 			println "extractAgentSources: up to date (${jars.size()} jars), nothing written"
 			return
 		}
 		outputDir.deleteDir()
 		outputDir.mkdirs()
+		def writtenPaths = new HashSet<String>()
 		jars.each { jar ->
-			new java.util.zip.ZipFile(jar).withCloseable { zip ->
+			new ZipFile(jar).withCloseable { zip ->
 				zip.entries().each { entry ->
 					if (entry.isDirectory() || !(entry.name.endsWith('.java') || entry.name.endsWith('.kt'))) {
+						return
+					}
+					if (!writtenPaths.add(entry.name)) {
 						return
 					}
 					def target = new File(outputDir, entry.name)
