@@ -59,7 +59,7 @@ public final class MitrasConfig extends Config {
         private final ValidatedDouble iconScaleField = new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedDouble textScaleField = new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedBoolean hudBackgroundField = new ValidatedBoolean(false);
-        private final ValidatedInt backgroundPaddingField = new ValidatedInt(3, 10, 0, ValidatedNumber.WidgetType.SLIDER);
+        private final ValidatedInt backgroundPaddingField = new ValidatedInt(3, 20, 0, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedDouble hudXField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
         private final ValidatedDouble hudYField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
         private final ValidatedEnum<TextColorMode> textColorModeEnum = new ValidatedEnum<>(TextColorMode.SOLID, ValidatedEnum.WidgetType.CYCLING);
@@ -134,9 +134,10 @@ public final class MitrasConfig extends Config {
                 .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
         public ValidatedCondition<Integer> hudBackgroundPadding = new ValidatedCondition<>(
                 backgroundPaddingField,
-                new ValidatedInt(3, 10, 0, ValidatedNumber.WidgetType.SLIDER))
+                new ValidatedInt(3, 20, 0, ValidatedNumber.WidgetType.SLIDER))
                 .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
         @ConfigGroup.Pop
+        public boolean hudBackgroundRounded = true;
         public ValidatedColor backgroundColor = new ValidatedColor(0x00, 0x00, 0x00, 0x66).withDyeColorPresets();
     }
 

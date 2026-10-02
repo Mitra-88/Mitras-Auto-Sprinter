@@ -324,10 +324,8 @@ public final class HudEditorScreen extends Screen {
         if (gridEnabled) {
             drawGrid(graphics);
         }
-        graphics.text(font, INSTRUCTIONS_MAIN, (width - font.width(INSTRUCTIONS_MAIN)) / 2,
-                height / 2 - 48, 0xFFFFFFFF, true);
-        graphics.text(font, INSTRUCTIONS_SNAPPING, (width - font.width(INSTRUCTIONS_SNAPPING)) / 2,
-                height / 2 - 36, 0xFFFFFFFF, true);
+        int lineY = drawCenteredLines(graphics, INSTRUCTIONS_MAIN, height / 2 - 48);
+        drawCenteredLines(graphics, INSTRUCTIONS_SNAPPING, lineY + 12);
 
         try {
             hud.drawAt(graphics, hudX, hudY);
@@ -350,6 +348,14 @@ public final class HudEditorScreen extends Screen {
         if (guideY != NO_GUIDE) {
             graphics.fill(0, guideY, width, guideY + 1, GUIDE_COLOR);
         }
+    }
+
+    private int drawCenteredLines(GuiGraphicsExtractor graphics, Component text, int y) {
+        for (String line : text.getString().split("\n")) {
+            graphics.text(font, line, (width - font.width(line)) / 2, y, 0xFFFFFFFF, true);
+            y += font.lineHeight;
+        }
+        return y;
     }
 
     private void drawGrid(GuiGraphicsExtractor graphics) {

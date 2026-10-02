@@ -313,11 +313,13 @@ public final class SprintHud {
         int elementHeight = elementHeight();
         int padding = backgroundPadding();
         if (padding > 0) {
-            graphics.fill(
+            int radius = config.hud.hudBackgroundRounded ? padding : 0;
+            fillRounded(graphics,
                     x - padding,
                     y - padding,
                     x + elementWidth + padding,
                     y + elementHeight + padding,
+                    radius,
                     backgroundColorArgb);
         }
         if (isIconMode()) {
@@ -348,6 +350,20 @@ public final class SprintHud {
                 drawCyclingText(graphics, font, drawText, laidOutTextOffset, colorMode == TextColorMode.CHROMA);
             }
             pose.popMatrix();
+        }
+    }
+
+    private void fillRounded(GuiGraphicsExtractor graphics, int x0, int y0, int x1, int y1, int radius, int color) {
+        int r = Math.clamp(radius, 0, Math.min((x1 - x0) / 2, (y1 - y0) / 2));
+        if (r == 0) {
+            graphics.fill(x0, y0, x1, y1, color);
+            return;
+        }
+        graphics.fill(x0, y0 + r, x1, y1 - r, color);
+        for (int i = 0; i < r; i++) {
+            int inset = r - 1 - i;
+            graphics.fill(x0 + inset, y0 + i, x1 - inset, y0 + i + 1, color);
+            graphics.fill(x0 + inset, y1 - i - 1, x1 - inset, y1 - i, color);
         }
     }
 

@@ -3,8 +3,8 @@
   "key.mitrasautosprinter.toggle": "Toggle Auto Sprint",
   "key.mitrasautosprinter.hud_editor": "Open HUD Editor",
   "hud.mitrasautosprinter.editor.title": "HUD Editor",
-  "hud.mitrasautosprinter.editor.instructions": "Drag to move - Arrow keys nudge (Shift = bigger steps) - Double-click to center - N cycles a preview state - ESC to save.",
-  "hud.mitrasautosprinter.editor.instructions_snapping": "R on the HUD to reset - G toggles grid snapping - Ctrl disables snapping.",
+  "hud.mitrasautosprinter.editor.instructions": "Drag to move\nArrow keys nudge (Shift = bigger steps)\nDouble-click to center\nN cycles a preview state\nESC to save.",
+  "hud.mitrasautosprinter.editor.instructions_snapping": "R on the HUD to reset\nG toggles grid snapping\nCtrl disables snapping.",
   "message.mitrasautosprinter.hud_failed": "Mitra's Auto Sprinter: the sprint HUD failed to draw and is now hidden. Open the HUD editor to reset it, or reconnect to the world.",
   "mitrasautosprinter.mitrasautosprinter": "Mitra's Auto Sprinter",
   "mitrasautosprinter.mitrasautosprinter.desc": "Client-side auto sprint settings.",
@@ -32,7 +32,7 @@
   "mitrasautosprinter.mitrasautosprinter.hud.hudBackground": "Background Box",
   "mitrasautosprinter.mitrasautosprinter.hud.hudBackground.desc": "Draw a background box behind the indicator. Text mode only; the box color is set under Style & Colors.",
   "mitrasautosprinter.mitrasautosprinter.hud.hudBackgroundPadding": "Background Padding",
-  "mitrasautosprinter.mitrasautosprinter.hud.hudBackgroundPadding.desc": "Space between the indicator and its background box, in pixels (0 to 10). Text mode only.",
+  "mitrasautosprinter.mitrasautosprinter.hud.hudBackgroundPadding.desc": "Space between the indicator and its background box, in pixels (0 to 20). With Rounded Corners on, the padding also sets the corner radius.",
   "mitrasautosprinter.mitrasautosprinter.hud.layout": "Position & Size",
   "mitrasautosprinter.mitrasautosprinter.hud.layout.desc": "Where the indicator sits, and how big the icon is. Use the HUD editor to drag it anywhere with snapping, or pick a preset position.",
   "mitrasautosprinter.mitrasautosprinter.hud.hudAnchor": "Position",
@@ -115,5 +115,7 @@
   "mitrasautosprinter.mitrasautosprinter.text.states": "State Labels",
   "mitrasautosprinter.mitrasautosprinter.text.states.desc": "The label shown for each HUD state.",
   "mitrasautosprinter.mitrasautosprinter.text.blocked": "Blocked Reason Labels",
-  "mitrasautosprinter.mitrasautosprinter.text.blocked.desc": "The text shown for each reason the sprint can be blocked. These fill in the Blocked Format label."
+  "mitrasautosprinter.mitrasautosprinter.text.blocked.desc": "The text shown for each reason the sprint can be blocked. These fill in the Blocked Format label.",
+  "mitrasautosprinter.mitrasautosprinter.hud.hudBackgroundRounded": "Rounded Corners",
+  "mitrasautosprinter.mitrasautosprinter.hud.hudBackgroundRounded.desc": "Round the corners of the background box. The corner radius follows the background padding."
 }
