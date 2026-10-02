@@ -33,7 +33,6 @@ public final class SprintHud {
     private static final Logger LOGGER = LoggerFactory.getLogger("mitrasautosprinter");
     private static final Identifier ELEMENT_ID = Identifier.fromNamespaceAndPath("mitrasautosprinter", "sprint");
 
-    static final int BACKGROUND_PADDING = 3;
     private static final long WIDTH_RECHECK_NANOS = 1_000_000_000L;
     private static final int ICON_BASE_SIZE = 18;
     private static final float ICON_DIMMED_ALPHA = 0.35f;
@@ -73,6 +72,7 @@ public final class SprintHud {
     private int colorOnArgb;
     private int colorOffArgb;
     private int colorBlockedArgb;
+    private int colorUnknownArgb;
     private int backgroundColorArgb;
     private volatile boolean colorsStale = true;
 
@@ -80,6 +80,11 @@ public final class SprintHud {
     private long widthCheckedAt;
 
     private boolean renderBroken;
+
+    private Component previewText;
+    private int previewColor;
+    private boolean previewActive;
+    private int previewIndex = -1;
     public SprintHud(MitrasConfig config) {
         this.config = config;
         rebuildLabels();
@@ -92,7 +97,8 @@ public final class SprintHud {
             reasonLabel(reason).listenToEntry(_ -> labelsDirty = true);
         }
         for (ValidatedField<?> colorSetting : List.of(
-                config.hud.colorOn, config.hud.colorOff, config.hud.colorBlocked, config.hud.backgroundColor)) {
+                config.hud.colorOn, config.hud.colorOff, config.hud.colorBlocked,
+                config.hud.colorUnknown, config.hud.backgroundColor)) {
             colorSetting.listenToEntry(_ -> colorsStale = true);
         }
 
@@ -104,6 +110,7 @@ public final class SprintHud {
         colorOnArgb = config.hud.colorOn.get().argb();
         colorOffArgb = config.hud.colorOff.get().argb();
         colorBlockedArgb = config.hud.colorBlocked.get().argb();
+        colorUnknownArgb = config.hud.colorUnknown.get().argb();
         backgroundColorArgb = config.hud.backgroundColor.get().argb();
         colorsStale = false;
     }
@@ -179,7 +186,7 @@ public final class SprintHud {
             if (reason != null) {
                 setState(blockedText.get(reason), colorBlockedArgb, false, true);
             } else {
-                setState(textUnknown, colorBlockedArgb, false, true);
+                setState(textUnknown, colorUnknownArgb, false, true);
             }
         }
 
@@ -196,6 +203,45 @@ public final class SprintHud {
         this.blocked = blocked;
     }
 
+    void cyclePreview() {
+        int blockedCount = SprintBlocker.values().length;
+        previewIndex++;
+        if (previewIndex >= blockedCount + 5) {
+            endPreview();
+            return;
+        }
+        Component text;
+        int color;
+        if (previewIndex == 0) {
+            text = textOn;
+            color = colorOnArgb;
+        } else if (previewIndex == 1) {
+            text = textOff;
+            color = colorOffArgb;
+        } else if (previewIndex < blockedCount + 2) {
+            SprintBlocker reason = SprintBlocker.values()[previewIndex - 2];
+            text = blockedText.get(reason);
+            color = colorBlockedArgb;
+        } else if (previewIndex == blockedCount + 2) {
+            text = textUnknown;
+            color = colorUnknownArgb;
+        } else if (previewIndex == blockedCount + 3) {
+            text = textJoining;
+            color = colorOffArgb;
+        } else {
+            text = textTerrain;
+            color = colorOffArgb;
+        }
+        previewText = text;
+        previewColor = color;
+        previewActive = true;
+    }
+
+    void endPreview() {
+        previewActive = false;
+        previewIndex = -1;
+    }
+
     public boolean isSettling() {
         return worldChange.isSettling();
     }
@@ -206,6 +252,10 @@ public final class SprintHud {
 
     boolean isIconMode() {
         return config.hud.displayMode.get() == DisplayMode.ICON;
+    }
+
+    int backgroundPadding() {
+        return config.hud.hudBackground.get() && !isIconMode() ? config.hud.hudBackgroundPadding.get() : 0;
     }
 
     private float textScale() {
@@ -242,18 +292,18 @@ public final class SprintHud {
     }
 
     private ValidatedString reasonLabel(SprintBlocker reason) {
-        MitrasConfig.ReasonSection reasons = config.reasons;
+        MitrasConfig.TextSection text = config.text;
         return switch (reason) {
-            case NOT_MOVING -> reasons.reasonStanding;
-            case RESTRICTED -> reasons.reasonRestricted;
-            case IN_VEHICLE -> reasons.reasonVehicle;
-            case TOO_HUNGRY -> reasons.reasonHungry;
-            case SHALLOW_WATER -> reasons.reasonShallowWater;
-            case USING_ITEM -> reasons.reasonUsingItem;
-            case ELYTRA -> reasons.reasonElytra;
-            case SNEAKING -> reasons.reasonSneaking;
-            case CRAWLING -> reasons.reasonSlow;
-            case HIT_WALL -> reasons.reasonWall;
+            case NOT_MOVING -> text.reasonStanding;
+            case RESTRICTED -> text.reasonRestricted;
+            case IN_VEHICLE -> text.reasonVehicle;
+            case TOO_HUNGRY -> text.reasonHungry;
+            case SHALLOW_WATER -> text.reasonShallowWater;
+            case USING_ITEM -> text.reasonUsingItem;
+            case ELYTRA -> text.reasonElytra;
+            case SNEAKING -> text.reasonSneaking;
+            case CRAWLING -> text.reasonSlow;
+            case HIT_WALL -> text.reasonWall;
         };
     }
 
@@ -261,27 +311,33 @@ public final class SprintHud {
         var font = Minecraft.getInstance().font;
         int elementWidth = elementWidth();
         int elementHeight = elementHeight();
-        if (config.hud.hudBackground.get() && !isIconMode()) {
-            graphics.fill(
-                    x - BACKGROUND_PADDING,
-                    y - BACKGROUND_PADDING,
-                    x + elementWidth + BACKGROUND_PADDING,
-                    y + elementHeight + BACKGROUND_PADDING,
+        int padding = backgroundPadding();
+        if (padding > 0) {
+            int radius = config.hud.hudBackgroundRounded ? padding : 0;
+            fillRounded(graphics,
+                    x - padding,
+                    y - padding,
+                    x + elementWidth + padding,
+                    y + elementHeight + padding,
+                    radius,
                     backgroundColorArgb);
         }
         if (isIconMode()) {
-            float alpha = stateOn ? 1.0f : ICON_DIMMED_ALPHA;
+            boolean lit = previewActive ? previewIndex == 0 : stateOn;
+            float alpha = lit ? 1.0f : ICON_DIMMED_ALPHA;
             graphics.blitSprite(
                     RenderPipelines.GUI_TEXTURED,
                     SPEED_ICON,
                     x, y, elementWidth, elementHeight,
                     ARGB.white(alpha));
         } else {
+            Component drawText = previewActive ? previewText : text;
+            int drawColor = previewActive ? previewColor : color;
             int fixedWidth = fixedTextWidth();
-            if (text != laidOutText || fixedWidth != laidOutForWidth) {
-                laidOutText = text;
+            if (drawText != laidOutText || fixedWidth != laidOutForWidth) {
+                laidOutText = drawText;
                 laidOutForWidth = fixedWidth;
-                laidOutTextOffset = (fixedWidth - font.width(text)) / 2;
+                laidOutTextOffset = (fixedWidth - font.width(drawText)) / 2;
             }
             var pose = graphics.pose();
             pose.pushMatrix();
@@ -289,11 +345,25 @@ public final class SprintHud {
             pose.scale(textScale(), textScale());
             TextColorMode colorMode = config.hud.textColorMode.get();
             if (colorMode == TextColorMode.SOLID) {
-                graphics.text(font, text, laidOutTextOffset, 0, color, config.hud.hudTextShadow);
+                graphics.text(font, drawText, laidOutTextOffset, 0, drawColor, config.hud.hudTextShadow);
             } else {
-                drawCyclingText(graphics, font, laidOutTextOffset, colorMode == TextColorMode.CHROMA);
+                drawCyclingText(graphics, font, drawText, laidOutTextOffset, colorMode == TextColorMode.CHROMA);
             }
             pose.popMatrix();
+        }
+    }
+
+    private void fillRounded(GuiGraphicsExtractor graphics, int x0, int y0, int x1, int y1, int radius, int color) {
+        int r = Math.clamp(radius, 0, Math.min((x1 - x0) / 2, (y1 - y0) / 2));
+        if (r == 0) {
+            graphics.fill(x0, y0, x1, y1, color);
+            return;
+        }
+        graphics.fill(x0, y0 + r, x1, y1 - r, color);
+        for (int i = 0; i < r; i++) {
+            int inset = r - 1 - i;
+            graphics.fill(x0 + inset, y0 + i, x1 - inset, y0 + i + 1, color);
+            graphics.fill(x0 + inset, y1 - i - 1, x1 - inset, y1 - i, color);
         }
     }
 
@@ -306,10 +376,10 @@ public final class SprintHud {
     private int laidOutForWidth;
     private int laidOutTextOffset;
 
-    private void drawCyclingText(GuiGraphicsExtractor graphics, Font font, int x, boolean chroma) {
-        if (text != cyclingText || cyclingLayoutFont != font) {
-            cyclingText = text;
-            buildCyclingLayout(font);
+    private void drawCyclingText(GuiGraphicsExtractor graphics, Font font, Component drawText, int x, boolean chroma) {
+        if (drawText != cyclingText || cyclingLayoutFont != font) {
+            cyclingText = drawText;
+            buildCyclingLayout(font, drawText.getString());
         }
         int count = cyclingGlyphCount;
         if (count == 0) {
@@ -325,8 +395,7 @@ public final class SprintHud {
         }
     }
 
-    private void buildCyclingLayout(Font font) {
-        String string = text.getString();
+    private void buildCyclingLayout(Font font, String string) {
         int count = string.codePointCount(0, string.length());
         if (cyclingGlyphs.length < count) {
             cyclingGlyphs = new String[count];
@@ -350,7 +419,8 @@ public final class SprintHud {
 
     static double normalizeCoordinate(int position, int screenSize, int elementSize) {
         int travel = Math.max(1, screenSize - elementSize);
-        return Math.clamp(position / (double) travel, 0.0, 1.0);
+        double normalized = Math.round(position / (double) travel * 10000.0) / 10000.0;
+        return Math.clamp(normalized, 0.0, 1.0);
     }
 
     static int denormalizeCoordinate(double normalized, int screenSize, int elementSize) {
@@ -362,8 +432,9 @@ public final class SprintHud {
     ElementBox resolvedBox(int guiWidth, int guiHeight) {
         int elementWidth = elementWidth();
         int elementHeight = elementHeight();
-        int boxWidth = elementWidth + BACKGROUND_PADDING * 2;
-        int boxHeight = elementHeight + BACKGROUND_PADDING * 2;
+        int pad = backgroundPadding();
+        int boxWidth = elementWidth + pad * 2;
+        int boxHeight = elementHeight + pad * 2;
         return new ElementBox(
                 resolvedBoxX(guiWidth, boxWidth, elementWidth),
                 resolvedBoxY(guiHeight, boxHeight, elementHeight),
@@ -372,21 +443,23 @@ public final class SprintHud {
     }
 
     private int resolvedBoxX(int guiWidth, int boxWidth, int elementWidth) {
+        int pad = backgroundPadding();
         int x = switch (config.hud.hudAnchor.get()) {
             case AUTO_CENTER_TOP, TOP_CENTER, BOTTOM_CENTER -> (guiWidth - boxWidth) / 2;
             case TOP_LEFT, BOTTOM_LEFT -> 0;
             case TOP_RIGHT, BOTTOM_RIGHT -> guiWidth - boxWidth;
-            case CUSTOM -> denormalizeCoordinate(config.hud.hudX.get(), guiWidth, elementWidth) - BACKGROUND_PADDING;
+            case CUSTOM -> denormalizeCoordinate(config.hud.hudX.get(), guiWidth, elementWidth) - pad;
         };
         return clampToScreen(x, guiWidth, boxWidth);
     }
 
     private int resolvedBoxY(int guiHeight, int boxHeight, int elementHeight) {
+        int pad = backgroundPadding();
         int y = switch (config.hud.hudAnchor.get()) {
-            case AUTO_CENTER_TOP -> AUTO_CENTER_TOP_Y - BACKGROUND_PADDING;
+            case AUTO_CENTER_TOP -> AUTO_CENTER_TOP_Y - pad;
             case TOP_LEFT, TOP_CENTER, TOP_RIGHT -> 0;
             case BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT -> guiHeight - BOTTOM_RESERVED_HUD_HEIGHT - boxHeight;
-            case CUSTOM -> denormalizeCoordinate(config.hud.hudY.get(), guiHeight, elementHeight) - BACKGROUND_PADDING;
+            case CUSTOM -> denormalizeCoordinate(config.hud.hudY.get(), guiHeight, elementHeight) - pad;
         };
         return clampToScreen(y, guiHeight, boxHeight);
     }
@@ -404,9 +477,10 @@ public final class SprintHud {
             int guiHeight = graphics.guiHeight();
             int elementWidth = elementWidth();
             int elementHeight = elementHeight();
-            int boxX = resolvedBoxX(guiWidth, elementWidth + BACKGROUND_PADDING * 2, elementWidth);
-            int boxY = resolvedBoxY(guiHeight, elementHeight + BACKGROUND_PADDING * 2, elementHeight);
-            drawAt(graphics, boxX + BACKGROUND_PADDING, boxY + BACKGROUND_PADDING);
+            int pad = backgroundPadding();
+            int boxX = resolvedBoxX(guiWidth, elementWidth + pad * 2, elementWidth);
+            int boxY = resolvedBoxY(guiHeight, elementHeight + pad * 2, elementHeight);
+            drawAt(graphics, boxX + pad, boxY + pad);
         } catch (Throwable t) {
             renderBroken = true;
             LOGGER.warn("HUD rendering failed once; disabling it until the HUD editor is opened or the world is changed.", t);

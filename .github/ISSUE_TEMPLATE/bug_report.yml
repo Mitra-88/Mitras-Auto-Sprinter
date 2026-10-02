@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report this!
-        Quick heads up: vanilla Minecraft has a few sprinting quirks of its own. For example, if you start sneaking while already sprinting, you keep sprinting. That's the game, not the mod (still true as of 26.3).
+        Quick heads up: vanilla Minecraft has a few sprinting quirks of its own. For example, if you start sneaking while already sprinting, you keep sprinting. That's the game, not the mod (still true as of 26.2).
 
   - type: textarea
     id: what-happened
@@ -51,9 +51,9 @@ body:
       label: Versions
       description: Please provide all four. The mod version is in the .jar filename in your `mods` folder.
       placeholder: |
-        Mitra's Auto Sprinter: 1.8.0
+        Mitra's Auto Sprinter: 1.9.0
         Minecraft: 26.3
-        Fabric Loader: 0.19.3
+        Fabric Loader: 0.19.5
         Fabric API: 0.161.0+26.3
     validations:
       required: true
@@ -65,10 +65,17 @@ body:
       description: |
         List them if you can. Movement, sprint, and HUD mods are especially interesting.
       placeholder: |
-        sodium-fabric-0.9.2+mc26.3.jar
-        lithium-fabric-0.25.3+mc26.3.jar
-        entityculling-fabric-1.10.5-mc26.3.jar
         ImmediatelyFast-Fabric-1.16.5+26.3.jar
+        entityculling-fabric-1.11.2-mc26.3.jar
+        fabric-api-0.161.0+26.2.jar
+        fabric-language-kotlin-1.14.1+kotlin.2.4.20.jar
+        ferritecore-9.0.0-fabric.jar
+        fzzy_config-0.7.7+26.2.jar
+        lithium-fabric-0.25.3+mc26.3.jar
+        mitrasautosprinter-1.8.0-fabric-mc26.2.jar
+        modmenu-20.0.3.jar
+        placeholder-api-3.1.0-beta.1+26.2.jar
+        sodium-fabric-0.9.2+mc26.3.jar
 
   - type: textarea
     id: logs

@@ -3,7 +3,7 @@
   "id": "mitrasautosprinter",
   "version": "${version}",
   "name": "Mitra's Auto Sprinter",
-  "description": "Auto-sprint that holds the sprint key for you, with a HUD that tells you why you can't sprint. 100% client-side and multiplayer-safe. Customizable (labels, colors, position, scale) and fixes MC-263293. Made for Hypixel Skyblock, works anywhere.",
+  "description": "Auto-sprint that holds the sprint key for you, with a HUD that tells you why you can't sprint.",
   "contact": {
     "homepage": "https://modrinth.com/mod/mitras-auto-sprinter",
     "sources": "https://github.com/Mitra-88/Mitras-Auto-Sprinter",
@@ -19,11 +19,11 @@
     ]
   },
   "depends": {
-    "fabricloader": ">=0.19.3",
-    "minecraft": ">=26.3",
-    "java": ">=25",
-    "fabric-api": "*",
-    "fzzy_config": ">=0.7.7+26.3"
+    "fabricloader": ">=${loader_version}",
+    "minecraft": ">=${minecraft_version}",
+    "java": ">=${java_version}",
+    "fabric-api": ">=${fabric_api_version}",
+    "fzzy_config": ">=${fzzy_config_version}"
   },
   "suggests": {
     "modmenu": ">=21.0.0"

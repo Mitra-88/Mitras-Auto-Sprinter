@@ -14,45 +14,29 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
         with:
-          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up JDK 25 (Zulu)
-        uses: actions/setup-java@1aa87b638dacaa70f1c903fa9ec9cbd91058e2ff
+        uses: actions/setup-java@a78ec39f1243adc9be41d35a49593a4c665a604c
         with:
           distribution: 'zulu'
           java-version: '25'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-read-only: false
-          cache-cleanup: on-success
-
-      - name: Cache Gradle wrapper distributions
-        uses: actions/cache@3edfce9056124e459a23f683a21433670d47daca
-        with:
-          path: |
-            ~/.gradle/wrapper/dists
-          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-wrapper-
-
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+        uses: gradle/actions/setup-gradle@f9f39a915cd0648dca917c72880100a59df96944
 
       - name: Read metadata
         id: meta
         run: |
-          grep -E '^(version|minecraft_version|releaseDevBuilds)=' gradle.properties >> "$GITHUB_OUTPUT"
-          GRADLE_VERSION=$(./gradlew --version --no-daemon | grep -E '^Gradle' | head -1 | sed 's/Gradle //' || echo "unknown")
-          echo "gradle_version=${GRADLE_VERSION}" >> "$GITHUB_OUTPUT"
+          grep -E '^(version|minecraft_version|releaseDevBuilds|loader_version|fabric_api_version|fzzy_config_version|loom_version)=' gradle.properties >> "$GITHUB_OUTPUT"
+          GRADLE_VERSION="$(sed -n 's/^distributionUrl=.*gradle-\(.*\)-[a-z]*\.zip/\1/p' gradle/wrapper/gradle-wrapper.properties)"
+          echo "gradle_version=${GRADLE_VERSION:-unknown}" >> "$GITHUB_OUTPUT"
         shell: bash
 
       - name: Get short SHA
@@ -71,24 +55,25 @@ jobs:
 
       - name: Generate release notes
         if: steps.meta.outputs.releaseDevBuilds == 'true'
-        id: notes
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUN_NUMBER: ${{ github.run_number }}
+          BRANCH: ${{ github.ref_name }}
+          MC_VERSION: ${{ steps.meta.outputs.minecraft_version }}
+          BASE_VERSION: ${{ steps.meta.outputs.version }}
+          FABRIC_LOADER: ${{ steps.meta.outputs.loader_version }}
+          FABRIC_API: ${{ steps.meta.outputs.fabric_api_version }}
+          FZZY_CONFIG: ${{ steps.meta.outputs.fzzy_config_version }}
+          LOOM_VERSION: ${{ steps.meta.outputs.loom_version }}
+          GRADLE_VERSION: ${{ steps.meta.outputs.gradle_version }}
         shell: bash
         run: |
-          REPO="${{ github.repository }}"
-          SHA="${{ github.sha }}"
-          SHORT_SHA="${{ steps.sha.outputs.short_sha }}"
-          BRANCH="${{ github.ref_name }}"
-          RUN_NUMBER="${{ github.run_number }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
           BUILT_AT="$(date -u +'%Y-%m-%d %H:%M UTC')"
 
-          PREV_SHA="$(git rev-list -n 1 refs/tags/nightly 2>/dev/null || true)"
-          if [ -z "$PREV_SHA" ]; then
-            PREV_SHA="$(git rev-list --max-parents=0 "$SHA")"
-          fi
-
-          CHANGES="$(git log "${PREV_SHA}..${SHA}" --pretty=format:'* %s (`%h`)' --no-merges | head -n 20)"
+          CHANGES="$(gh api "repos/${REPO}/compare/nightly...${GITHUB_SHA}" --jq '[.commits[] | select((.parents | length) == 1)] | reverse | .[:20][] | "* " + (.commit.message | split("\n")[0]) + " (`" + .sha[0:7] + "`")" 2>/dev/null || true)"
           if [ -z "$CHANGES" ]; then
             CHANGES="* No changes since last nightly"
           fi
@@ -101,23 +86,15 @@ jobs:
             HASHES="${HASHES}* \`${name}\`\n  - SHA-256: \`${sha256}\`\n  - SHA-512: \`${sha512}\`\n"
           done
 
-          FABRIC_LOADER="$(grep -oP '(?<=^loader_version=)\S+' gradle.properties || echo 'unknown')"
-          FABRIC_API="$(grep -oP '(?<=^fabric_api_version=)\S+' gradle.properties || echo 'unknown')"
-          FZZY_CONFIG="$(grep -oP '(?<=^fzzy_config_version=)\S+' gradle.properties || echo 'unknown')"
-          LOOM_VERSION="$(grep -oP '(?<=^loom_version=)\S+' gradle.properties || echo 'unknown')"
-          GRADLE_VERSION="${{ steps.meta.outputs.gradle_version }}"
-
-          JAVA_VER="25 (Zulu)"
-
           {
             echo "**Automated Nightly Build**"
-            echo "* **Minecraft Version:** \`${{ steps.meta.outputs.minecraft_version }}\`"
-            echo "* **Base Version:** \`${{ steps.meta.outputs.version }}\`"
+            echo "* **Minecraft Version:** \`${MC_VERSION}\`"
+            echo "* **Base Version:** \`${BASE_VERSION}\`"
             echo "* **Build Number:** #${RUN_NUMBER}"
-            echo "* **Branch:** [\`${BRANCH}\`](https://github.com/${REPO}/tree/${SHA})"
-            echo "* **Commit:** [\`${SHORT_SHA}\`](https://github.com/${REPO}/commit/${SHA})"
+            echo "* **Branch:** [\`${BRANCH}\`](https://github.com/${REPO}/tree/${GITHUB_SHA})"
+            echo "* **Commit:** [\`${SHORT_SHA}\`](https://github.com/${REPO}/commit/${GITHUB_SHA})"
             echo "* **Built on:** ${BUILT_AT}"
-            echo "* **Java Runtime:** Java ${JAVA_VER}"
+            echo "* **Java Runtime:** Java 25 (Zulu)"
             echo "* **Gradle Version:** ${GRADLE_VERSION}"
             echo ""
             echo "## 📦 Dependencies"
@@ -130,10 +107,10 @@ jobs:
             echo "| Gradle | \`${GRADLE_VERSION}\` |"
             echo ""
             echo "## 📝 Recent Changes"
-            echo -e "$CHANGES"
+            printf '%s\n' "$CHANGES"
             echo ""
             echo "## 🔐 File Hashes"
-            echo -e "$HASHES"
+            printf '%b\n' "$HASHES"
             echo "> [!CAUTION]"
             echo "> This build is automatically generated and unreleased. Features may be incomplete, unstable, or potentially breaking. Backup your configs before testing."
           } > release_notes.md
@@ -144,14 +121,18 @@ jobs:
         if: steps.meta.outputs.releaseDevBuilds == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUN_NUMBER: ${{ github.run_number }}
+          MC_VERSION: ${{ steps.meta.outputs.minecraft_version }}
         shell: bash
         run: |
           TAG="nightly"
+          TITLE="Nightly (mc${MC_VERSION}, build #${RUN_NUMBER})"
 
-          gh release delete "$TAG" --yes --cleanup-tag || true
-
-          gh release create "$TAG" build/libs/*.jar \
-            --prerelease \
-            --title "Nightly (mc${{ steps.meta.outputs.minecraft_version }}, build #${{ github.run_number }})" \
-            --notes-file release_notes.md \
-            --target "${{ github.sha }}"
+          if gh release view "$TAG" -R "$REPO" > /dev/null 2>&1; then
+            gh release upload "$TAG" build/libs/*.jar --clobber -R "$REPO"
+            gh release edit "$TAG" --prerelease --title "$TITLE" --notes-file release_notes.md -R "$REPO"
+          else
+            gh release create "$TAG" build/libs/*.jar --prerelease --title "$TITLE" --notes-file release_notes.md --target "$SHA" -R "$REPO"
+          fi

@@ -10,6 +10,7 @@ import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedBoolean;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedColor;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedCondition;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedDouble;
+import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedInt;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedEnum;
 import me.fzzyhmstrs.fzzy_config.validation.misc.ValidatedString;
 import me.fzzyhmstrs.fzzy_config.validation.number.ValidatedNumber;
@@ -27,7 +28,6 @@ public final class MitrasConfig extends Config {
     public SprintSection sprint = new SprintSection();
     public HudSection hud = new HudSection();
     public TextSection text = new TextSection();
-    public ReasonSection reasons = new ReasonSection();
 
     public MitrasConfig() {
         super(Identifier.fromNamespaceAndPath(MOD_ID, MOD_ID), "", MOD_ID);
@@ -55,23 +55,21 @@ public final class MitrasConfig extends Config {
         private final ValidatedColor colorOnField = new ValidatedColor(0x55, 0xFF, 0x55, 0xFF).withFormattingColorPresets();
         private final ValidatedColor colorOffField = new ValidatedColor(0xAA, 0xAA, 0xAA, 0xFF).withFormattingColorPresets();
         private final ValidatedColor colorBlockedField = new ValidatedColor(0xFF, 0xFF, 0x55, 0xFF).withFormattingColorPresets();
+        private final ValidatedColor colorUnknownField = new ValidatedColor(0xFF, 0xFF, 0x55, 0xFF).withFormattingColorPresets();
         private final ValidatedDouble iconScaleField = new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedDouble textScaleField = new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedBoolean hudBackgroundField = new ValidatedBoolean(false);
+        private final ValidatedInt backgroundPaddingField = new ValidatedInt(3, 20, 0, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedDouble hudXField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
         private final ValidatedDouble hudYField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
         private final ValidatedEnum<TextColorMode> textColorModeEnum = new ValidatedEnum<>(TextColorMode.SOLID, ValidatedEnum.WidgetType.CYCLING);
 
         @SuppressWarnings("unused")
-        public ConfigGroup display = new ConfigGroup("display");
+        public ConfigGroup mode = new ConfigGroup("mode");
         public boolean hudVisible = true;
         public ValidatedEnum<DisplayMode> displayMode = new ValidatedEnum<>(DisplayMode.TEXT, ValidatedEnum.WidgetType.CYCLING);
-        public ValidatedEnum<HudShowMode> showMode = new ValidatedEnum<>(HudShowMode.ALWAYS, ValidatedEnum.WidgetType.CYCLING);
         @ConfigGroup.Pop
-        public ValidatedCondition<Boolean> hudBackground = new ValidatedCondition<>(
-                hudBackgroundField,
-                new ValidatedBoolean(false))
-                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
+        public ValidatedEnum<HudShowMode> showMode = new ValidatedEnum<>(HudShowMode.ALWAYS, ValidatedEnum.WidgetType.CYCLING);
 
         @SuppressWarnings("unused")
         public ConfigGroup layout = new ConfigGroup("layout");
@@ -84,14 +82,14 @@ public final class MitrasConfig extends Config {
                 hudYField,
                 new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX))
                 .withCondition(REQUIRES_CUSTOM_ANCHOR, () -> hudAnchor.get() == HudAnchor.CUSTOM);
-        public ValidatedCondition<Double> hudIconScale = new ValidatedCondition<>(
-                iconScaleField,
-                new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER))
-                .withCondition(REQUIRES_ICON_MODE, () -> displayMode.get() == DisplayMode.ICON);
         public ValidatedCondition<Double> hudTextScale = new ValidatedCondition<>(
                 textScaleField,
                 new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER))
                 .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
+        public ValidatedCondition<Double> hudIconScale = new ValidatedCondition<>(
+                iconScaleField,
+                new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER))
+                .withCondition(REQUIRES_ICON_MODE, () -> displayMode.get() == DisplayMode.ICON);
         @ConfigGroup.Pop
         @SuppressWarnings("unused")
         public ConfigAction openHudEditorButton = new ConfigAction.Builder()
@@ -100,8 +98,7 @@ public final class MitrasConfig extends Config {
                 .build(() -> MitrasConfig.hudEditorAction.run());
 
         @SuppressWarnings("unused")
-        public ConfigGroup style = new ConfigGroup("style");
-        public boolean hudTextShadow = true;
+        public ConfigGroup colors = new ConfigGroup("colors");
         public ValidatedCondition<TextColorMode> textColorMode = new ValidatedCondition<>(
                 textColorModeEnum,
                 new ValidatedEnum<>(TextColorMode.SOLID, ValidatedEnum.WidgetType.CYCLING))
@@ -121,20 +118,43 @@ public final class MitrasConfig extends Config {
                 new ValidatedColor(0xFF, 0xFF, 0x55, 0xFF).withFormattingColorPresets())
                 .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT)
                 .withCondition(REQUIRES_SOLID_COLOR, () -> textColorMode.get() == TextColorMode.SOLID);
+        public ValidatedCondition<ValidatedColor.ColorHolder> colorUnknown = new ValidatedCondition<>(
+                colorUnknownField,
+                new ValidatedColor(0xFF, 0xFF, 0x55, 0xFF).withFormattingColorPresets())
+                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT)
+                .withCondition(REQUIRES_SOLID_COLOR, () -> textColorMode.get() == TextColorMode.SOLID);
         @ConfigGroup.Pop
+        public boolean hudTextShadow = true;
+
+        @SuppressWarnings("unused")
+        public ConfigGroup background = new ConfigGroup("background");
+        public ValidatedCondition<Boolean> hudBackground = new ValidatedCondition<>(
+                hudBackgroundField,
+                new ValidatedBoolean(false))
+                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
+        public ValidatedCondition<Integer> hudBackgroundPadding = new ValidatedCondition<>(
+                backgroundPaddingField,
+                new ValidatedInt(3, 20, 0, ValidatedNumber.WidgetType.SLIDER))
+                .withCondition(REQUIRES_TEXT_MODE, () -> displayMode.get() == DisplayMode.TEXT);
+        @ConfigGroup.Pop
+        public boolean hudBackgroundRounded = true;
         public ValidatedColor backgroundColor = new ValidatedColor(0x00, 0x00, 0x00, 0x66).withDyeColorPresets();
     }
 
     public static class TextSection extends ConfigSection {
+
+        @SuppressWarnings("unused")
+        public ConfigGroup states = new ConfigGroup("states");
         public ValidatedString textOn = new ValidatedString("Sprint ON");
         public ValidatedString textOff = new ValidatedString("Sprint OFF");
         public ValidatedString textJoining = new ValidatedString("Joining...");
         public ValidatedString textTerrain = new ValidatedString("Loading terrain...");
-        public ValidatedString textBlockedFormat = new ValidatedString("Sprint OFF - %s");
+        @ConfigGroup.Pop
         public ValidatedString textUnknown = new ValidatedString("Unknown Reason");
-    }
 
-    public static class ReasonSection extends ConfigSection {
+        @SuppressWarnings("unused")
+        public ConfigGroup blocked = new ConfigGroup("blocked");
+        public ValidatedString textBlockedFormat = new ValidatedString("Sprint OFF - %s");
         public ValidatedString reasonStanding = new ValidatedString("Not Moving");
         public ValidatedString reasonRestricted = new ValidatedString("Restricted");
         public ValidatedString reasonVehicle = new ValidatedString("In Vehicle");
@@ -144,6 +164,7 @@ public final class MitrasConfig extends Config {
         public ValidatedString reasonElytra = new ValidatedString("Flying");
         public ValidatedString reasonSneaking = new ValidatedString("Sneaking");
         public ValidatedString reasonSlow = new ValidatedString("Crawling");
+        @ConfigGroup.Pop
         public ValidatedString reasonWall = new ValidatedString("Hit Wall");
     }
 }
