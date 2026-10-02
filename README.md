@@ -39,11 +39,12 @@ Bind the **HUD editor** key in **Options → Controls → Mitra's Auto Sprinter*
 - **Arrow keys** nudge it 1 pixel; **Shift + arrows** in bigger steps.
 - **Double-click** to center it horizontally.
 - **G** toggles an 8-pixel alignment grid, **R** resets the position.
+- **N** cycles preview states (ON, OFF, every blocked reason, unknown, loading states) so you can line the HUD up against labels that are not on screen right now.
 - **ESC** saves everything.
 
 ## Settings
 
-Most things live on the keybind and HUD editor above. For everything else: **Mod Menu → Mitra's Auto Sprinter → Configure**. There you'll find show/hide rules (always / only when blocked / flash on change), text vs icon mode, background, shadow, scales, solid / rainbow / chroma text colors, and the text of every label the HUD can show, blocked reasons included.
+Most things live on the keybind and HUD editor above. For everything else: **Mod Menu → Mitra's Auto Sprinter → Configure**. There you'll find show/hide rules (always / only when blocked / flash on change), text vs icon mode, background with adjustable padding, shadow, scales, solid / rainbow / chroma text colors with a separate unknown-reason color, and the text of every label the HUD can show, blocked reasons included.
 
 ## Is it safe?
 

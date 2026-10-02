@@ -62,6 +62,7 @@ public final class HudEditorScreen extends Screen {
 
     @Override
     protected void init() {
+        hud.endPreview();
         SprintHud.ElementBox box = hud.resolvedBox(width, height);
         hudX = box.x() + BORDER_PADDING;
         hudY = box.y() + BORDER_PADDING;
@@ -112,6 +113,10 @@ public final class HudEditorScreen extends Screen {
     public boolean keyPressed(@NonNull KeyEvent event) {
         if (event.key() == InputConstants.KEY_G) {
             gridEnabled = !gridEnabled;
+            return true;
+        }
+        if (event.key() == InputConstants.KEY_N) {
+            hud.cyclePreview();
             return true;
         }
         int step = event.hasShiftDown() ? (gridEnabled ? GRID_SIZE : NUDGE_LARGE_STEP) : 1;
@@ -199,7 +204,7 @@ public final class HudEditorScreen extends Screen {
     }
 
     private int visualPadding() {
-        return config.hud.hudBackground.get() && !hud.isIconMode() ? SprintHud.BACKGROUND_PADDING : 0;
+        return hud.backgroundPadding();
     }
 
     private int snapX(int x, boolean snapActive) {
@@ -300,6 +305,7 @@ public final class HudEditorScreen extends Screen {
     @Override
     public void removed() {
         super.removed();
+        hud.endPreview();
         if (moved) {
             config.hud.hudAnchor.accept(HudAnchor.CUSTOM);
             config.hud.hudX.accept(SprintHud.normalizeCoordinate(hudX, width, hud.elementWidth()));
