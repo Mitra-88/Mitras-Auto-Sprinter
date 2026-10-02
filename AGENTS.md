@@ -144,7 +144,7 @@ All code lives in `src/client/java/dev/mitra/client/` (Loom `splitEnvironmentSou
 - **Never crash the game from rendering:** new HUD/editor draw code stays behind the existing try/catch + self-disable (`renderBroken`) pattern.
 - **Lang completeness:** every new config setting, enum constant, keybind, or message needs its `en_us.json` key (plus `.desc` for settings), following the doubled-prefix scheme; an `EnumTranslatable.prefix()` must match its lang keys.
 - **New reasons** need a `TextSection` field (blocked group), a case in `SprintHud`'s `reasonLabel` switch (exhaustive with no `default` - javac fails the build if a `SprintBlocker` constant has no case), and a lang key + `.desc`. New text labels join the constructor's `listenToEntry` list; `fixedTextWidth()` picks up all labels automatically.
-- **Commit style:** conventional commits with a scope, `!` for breaking changes (e.g. `feat(hud): …`, `perf(hud): …`).
+- **Commit style:** conventional commits with a scope, `!` for breaking changes (e.g. `feat(hud): …`, `perf(hud): …`). On this port branch only, syncs from master are committed as a single plain note (e.g. `ported changes from master branch (26.2)`); the detailed conventional commits live on master alone.
 
 ## Gotchas & quirks
 
@@ -153,6 +153,7 @@ All code lives in `src/client/java/dev/mitra/client/` (Loom `splitEnvironmentSou
 - Icon mode draws the speed-effect sprite (`Hud.getMobEffectSprite(MobEffects.SPEED)`) at alpha 0.35 when not sprinting; the background box is Text-mode-only (`hudBackground` is a `ValidatedCondition` gated on TEXT).
 - ON_CHANGE show mode keeps the HUD visible for 60 ticks (3 s) after any label change.
 - The editor persists position in `removed()` (ESC = save) and only when something actually moved/resized; `R` (reset) writes anchor `AUTO_CENTER_TOP` directly.
+- Unbound keybinds must default to `InputConstants.UNKNOWN.getValue()`, never -1. 26.3 input is SDL-based: `InputConstants.isKeyDown` reads `SDLKeyboard.SDL_GetKeyboardState()` with no bounds guard (`keyboardState.get(key)`), and that buffer is indexed by SDL scancode with `SDL_SCANCODE_COUNT = 512` valid entries. A -1 key crashes with an IndexOutOfBoundsException when `KeyMapping.setAll` polls on mouse grab (world load), and any GLFW-keycode-style value would be wrong even when in bounds. All `KEY_*` constants are scancodes; cross-check new ones against `org.lwjgl.sdl.SDLScancode`. Vanilla registers unbound keys with `InputConstants.UNKNOWN.getValue()` in `Options` (26.2 and earlier used GLFW input, where -1 was harmless).
 - The doubled `mitrasautosprinter.mitrasautosprinter.*` lang prefix is intentional (Fzzy id + config id), not a typo.
 - Editor instruction strings break on a literal `
 ` escape in the lang value; `HudEditorScreen.drawCenteredLines` renders each line centered and stacked, so adding a line to the lang string just works.

@@ -41,7 +41,7 @@ public final class MitrasAutoSprinterClient implements ClientModInitializer {
     private static final KeyMapping HUD_EDITOR_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.mitrasautosprinter.hud_editor",
             InputConstants.Type.KEYBOARD,
-            -1,
+            InputConstants.UNKNOWN.getValue(),
             KEY_CATEGORY));
 
     @Override
