@@ -114,7 +114,7 @@ All code lives in `src/client/java/dev/mitra/client/` (Loom `splitEnvironmentSou
 
 **Root package**
 
-- `MitrasAutoSprinterClient` - `ClientModInitializer`. Init order: `MitrasConfig.register()` → `new SprintHud` → `new AutoSprint` → sets the static `MitrasConfig.hudEditorAction` → registers events. Two keybinds in its own `KeyMapping.Category`: toggle (default K) and HUD editor (unbound), consumed in `END_CLIENT_TICK`. `AFTER_CLIENT_LEVEL_CHANGE` / `ClientPlayConnectionEvents.JOIN` arm the HUD settle. A `ScreenEvents.AFTER_INIT` hook keeps drawing the HUD over `LevelLoadingScreen`/`ProgressScreen` while settling.
+- `MitrasAutoSprinterClient` - `ClientModInitializer`. Init order: `MitrasConfig.register()` → `new SprintHud` → `new AutoSprint` → sets the static `MitrasConfig.hudEditorAction` → registers events. Two keybinds in its own `KeyMapping.Category`: toggle (default K) and HUD editor (unbound), consumed in `END_CLIENT_TICK`. `AFTER_CLIENT_LEVEL_CHANGE` / `ClientPlayConnectionEvents.JOIN` arm the HUD settle. A client command `/mitrasautosprinter` opens the Fzzy config screen via `ConfigApiJava.INSTANCE.openScreen`. A `ScreenEvents.AFTER_INIT` hook keeps drawing the HUD over `LevelLoadingScreen`/`ProgressScreen` while settling.
 
 **`sprint/`**
 
@@ -132,11 +132,11 @@ All code lives in `src/client/java/dev/mitra/client/` (Loom `splitEnvironmentSou
 - `MitrasConfig` - Fzzy `Config` registered under `Identifier(namespace = mod id, path = mod id)` - this is why lang keys carry the doubled `mitrasautosprinter.mitrasautosprinter.` prefix. `MIN_SCALE`/`MAX_SCALE` (0.25-8) bound both scale sliders. The static `hudEditorAction` `Runnable` lets the config screen's "Open HUD Editor" button open the editor without the config class depending on Minecraft screens.
 - Enums: `DisplayMode` (TEXT/ICON), `HudShowMode` (ALWAYS/BLOCKED_ONLY/ON_CHANGE), and `HudAnchor` (presets + CUSTOM) implement Fzzy `EnumTranslatable`; `TextColorMode` (SOLID/RAINBOW/CHROMA) is a plain enum.
 
-**Resources** - `fabric.mod.json` (client entrypoint; depends fabric-api + fzzy_config; `environment: "client"`), `lang/en_us.json` (keys + `.desc` for every setting, enum-constant labels, keybinds, editor strings), `icon.png`. Player-facing docs live at the repo root: `README.md` (features, quick start, HUD reference, editor controls) and `PROOF.md` (plain-English safety explainer). When changing user-visible behavior (keybinds, labels, colors, editor controls, defaults), check both docs and the `.github/ISSUE_TEMPLATE/` placeholders for claims that go stale.
+**Resources** - `fabric.mod.json` (client entrypoint; depends fabric-api + fzzy_config; `environment: "client"`), `lang/en_us.json` (keys + `.desc` for every setting, enum-constant labels, keybinds, editor strings), `icon.png`. Player-facing docs live at the repo root: `README.md` (short pitch: what it is, supported versions, links, license), `GUIDE.md` (quick start, HUD reference, editor controls, settings), and `PROOF.md` (plain-English safety explainer). When changing user-visible behavior (keybinds, labels, colors, editor controls, defaults), check the guide and the `.github/ISSUE_TEMPLATE/` placeholders for claims that go stale.
 
 ## Rules that matter for edits
 
-- **Client-only contract:** never add networking, commands, or anything server-visible (see *What this is*).
+- **Client-only contract:** never add networking or anything server-visible (see *What this is*). The one allowed command form is a client-side chat command (Fabric `ClientCommands` via `ClientCommandRegistrationCallback`): it executes locally and is never sent to the server, e.g. `/mitrasautosprinter` opens the config screen.
 - **No mixins.** The mod is pure Fabric API events; don't introduce a `mixins.json`.
 - **Mappings:** Mojang official (`net.minecraft.resources.Identifier`, `GuiGraphicsExtractor`) - don't mix in Yarn names.
 - **MC 26.x API shape:** HUD via `HudElementRegistry` + `extractRenderState`/`GuiGraphicsExtractor`; `Screen` input arrives as `KeyEvent`/`MouseButtonEvent` and rendering happens in `extractRenderState`; screens are read/set via `client.gui.screen()`/`setScreen`. Match the existing files - older tutorials won't apply.
@@ -154,7 +154,9 @@ All code lives in `src/client/java/dev/mitra/client/` (Loom `splitEnvironmentSou
 - ON_CHANGE show mode keeps the HUD visible for 60 ticks (3 s) after any label change.
 - The editor persists position in `removed()` (ESC = save) and only when something actually moved/resized; `R` (reset) writes anchor `AUTO_CENTER_TOP` directly.
 - The doubled `mitrasautosprinter.mitrasautosprinter.*` lang prefix is intentional (Fzzy id + config id), not a typo.
-- The background box padding (`hudBackgroundPadding`, 0 to 10 px) feeds both the drawn box and the editor's snap offsets through `SprintHud.backgroundPadding()`; unknown has its own `colorUnknown` instead of reusing the blocked color.
+- Editor instruction strings break on a literal `
+` escape in the lang value; `HudEditorScreen.drawCenteredLines` renders each line centered and stacked, so adding a line to the lang string just works.
+- The background box padding (`hudBackgroundPadding`, 0 to 20 px) feeds both the drawn box and the editor's snap offsets through `SprintHud.backgroundPadding()`; with `hudBackgroundRounded` on, the radius equals the padding. Unknown has its own `colorUnknown` instead of reusing the blocked color.
 - `normalizeCoordinate` rounds to 4 decimals so the Custom position fields show readable values (0.5656, not 0.56558995); the worst-case error is sub-pixel for any realistic travel.
 - The HUD element is suppressed while the editor screen is open or `renderBroken` is set.
 - Java 25 idioms are in use (e.g. `_` unnamed lambda parameters) - fine to use.
