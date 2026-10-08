@@ -147,7 +147,7 @@ All code lives in `src/client/java/dev/mitra/client/` (Loom `splitEnvironmentSou
 - **Commit style:** conventional commits with a scope, `!` for breaking changes (e.g. `feat(hud): …`, `perf(hud): …`).
 
 ## Gotchas & quirks
-
+- `options.keySprint` is always a `ToggleKeyMapping` whose `setDown(true)` FLIPS the latch when vanilla toggle sprint is on (`super.setDown(!isDown())`, guarded by `if (down)`; `setDown(false)` is a no-op there). Poking it every tick saw-tooths the latch: if the toggle happened to be latched on when the mod enabled, the game saw the key as up during every tick, the player never sprinted, and the HUD fell through to Unknown. `AutoSprint.holdSprintKey` is therefore ensure-latch while enabled (only call `setDown(true)` when `!isDown()`), and on disable it releases in the mode's own vocabulary: `setDown(false)` in hold mode, a flip via `setDown(true)` while latched in toggle mode (only if still down, so a user who untoggled manually is not flipped back on). If the user's own toggle was already latched when the mod enabled, `holdingSprintKey` stays false and disable leaves their state alone.
 - `hudX`/`hudY` are normalized 0.0-1.0 over the *travel* (screen size minus element size), which keeps the position stable across GUI scales; convert only through `SprintHud.normalizeCoordinate`/`denormalizeCoordinate`/`clampToScreen`.
 - Layout constants: `AUTO_CENTER_TOP_Y = 33` (below the boss bar) and `BOTTOM_RESERVED_HUD_HEIGHT = 50` (above the hotbar cluster) - the editor's snap targets use them too.
 - Icon mode draws the speed-effect sprite (`Hud.getMobEffectSprite(MobEffects.SPEED)`) at alpha 0.35 when not sprinting; the background box is Text-mode-only (`hudBackground` is a `ValidatedCondition` gated on TEXT).
