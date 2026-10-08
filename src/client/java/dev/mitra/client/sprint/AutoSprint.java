@@ -2,6 +2,7 @@ package dev.mitra.client.sprint;
 
 import dev.mitra.client.config.MitrasConfig;
 import dev.mitra.client.hud.SprintHud;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 
 public final class AutoSprint {
@@ -31,11 +32,20 @@ public final class AutoSprint {
     }
 
     private void holdSprintKey(Minecraft client) {
+        KeyMapping sprintKey = client.options.keySprint;
         if (config.sprint.sprintEnabled) {
-            client.options.keySprint.setDown(true);
-            holdingSprintKey = true;
+            if (!sprintKey.isDown()) {
+                sprintKey.setDown(true);
+                holdingSprintKey = true;
+            }
         } else if (holdingSprintKey) {
-            client.options.keySprint.setDown(false);
+            if (client.options.toggleSprint().get()) {
+                if (sprintKey.isDown()) {
+                    sprintKey.setDown(true);
+                }
+            } else {
+                sprintKey.setDown(false);
+            }
             holdingSprintKey = false;
         }
     }
