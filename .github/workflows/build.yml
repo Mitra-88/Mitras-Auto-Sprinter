@@ -17,9 +17,20 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout repository
+      - name: Checkout master (26.2 line)
+        id: mc262
         uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
         with:
+          ref: master
+          path: mc26.2
+          persist-credentials: false
+
+      - name: Checkout mc26.3-fabric (26.3 line)
+        id: mc263
+        uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a
+        with:
+          ref: mc26.3-fabric
+          path: mc26.3
           persist-credentials: false
 
       - name: Set up JDK 25 (Zulu)
@@ -34,52 +45,61 @@ jobs:
       - name: Read metadata
         id: meta
         run: |
-          grep -E '^(version|minecraft_version|releaseDevBuilds|loader_version|fabric_api_version|fzzy_config_version|loom_version)=' gradle.properties >> "$GITHUB_OUTPUT"
-          GRADLE_VERSION="$(sed -n 's/^distributionUrl=.*gradle-\(.*\)-[a-z]*\.zip/\1/p' gradle/wrapper/gradle-wrapper.properties)"
+          grep -E '^(version|minecraft_version|releaseDevBuilds|loader_version|fabric_api_version|fzzy_config_version|loom_version)=' mc26.2/gradle.properties | sed 's/^/mc262_/' >> "$GITHUB_OUTPUT"
+          grep -E '^(version|minecraft_version|releaseDevBuilds|loader_version|fabric_api_version|fzzy_config_version|loom_version)=' mc26.3/gradle.properties | sed 's/^/mc263_/' >> "$GITHUB_OUTPUT"
+          GRADLE_VERSION="$(sed -n 's/^distributionUrl=.*gradle-\(.*\)-[a-z]*\.zip/\1/p' mc26.2/gradle/wrapper/gradle-wrapper.properties)"
           echo "gradle_version=${GRADLE_VERSION:-unknown}" >> "$GITHUB_OUTPUT"
         shell: bash
 
-      - name: Get short SHA
-        id: sha
-        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-        shell: bash
+      - name: Build 26.2 line
+        working-directory: mc26.2
+        run: ./gradlew build
 
-      - name: Build with Gradle
+      - name: Build 26.3 line
+        working-directory: mc26.3
         run: ./gradlew build
 
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: Mitra's-Auto-Sprinter-${{ steps.sha.outputs.short_sha }}-${{ github.ref_name }}
-          path: build/libs/
+          name: Mitra's-Auto-Sprinter-${{ github.run_number }}-mc26.2-and-mc26.3
+          path: |
+            mc26.2/build/libs/
+            mc26.3/build/libs/
 
       - name: Generate release notes
-        if: steps.meta.outputs.releaseDevBuilds == 'true'
+        if: steps.meta.outputs.mc262_releaseDevBuilds == 'true' || steps.meta.outputs.mc263_releaseDevBuilds == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
           RUN_NUMBER: ${{ github.run_number }}
+          COMMIT_262: ${{ steps.mc262.outputs.commit }}
+          COMMIT_263: ${{ steps.mc263.outputs.commit }}
           BRANCH: ${{ github.ref_name }}
-          MC_VERSION: ${{ steps.meta.outputs.minecraft_version }}
-          BASE_VERSION: ${{ steps.meta.outputs.version }}
-          FABRIC_LOADER: ${{ steps.meta.outputs.loader_version }}
-          FABRIC_API: ${{ steps.meta.outputs.fabric_api_version }}
-          FZZY_CONFIG: ${{ steps.meta.outputs.fzzy_config_version }}
-          LOOM_VERSION: ${{ steps.meta.outputs.loom_version }}
+          BASE_VERSION_262: ${{ steps.meta.outputs.mc262_version }}
+          BASE_VERSION_263: ${{ steps.meta.outputs.mc263_version }}
+          MC_VERSION_262: ${{ steps.meta.outputs.mc262_minecraft_version }}
+          MC_VERSION_263: ${{ steps.meta.outputs.mc263_minecraft_version }}
+          FABRIC_LOADER_262: ${{ steps.meta.outputs.mc262_loader_version }}
+          FABRIC_LOADER_263: ${{ steps.meta.outputs.mc263_loader_version }}
+          FABRIC_API_262: ${{ steps.meta.outputs.mc262_fabric_api_version }}
+          FABRIC_API_263: ${{ steps.meta.outputs.mc263_fabric_api_version }}
+          FZZY_CONFIG_262: ${{ steps.meta.outputs.mc262_fzzy_config_version }}
+          FZZY_CONFIG_263: ${{ steps.meta.outputs.mc263_fzzy_config_version }}
+          LOOM_VERSION_262: ${{ steps.meta.outputs.mc262_loom_version }}
+          LOOM_VERSION_263: ${{ steps.meta.outputs.mc263_loom_version }}
           GRADLE_VERSION: ${{ steps.meta.outputs.gradle_version }}
         shell: bash
         run: |
-          SHORT_SHA="${GITHUB_SHA::7}"
           BUILT_AT="$(date -u +'%Y-%m-%d %H:%M UTC')"
 
-          CHANGES="$(gh api "repos/${REPO}/compare/nightly...${GITHUB_SHA}" --jq '[.commits[] | select((.parents | length) == 1)] | reverse | .[:20][] | "* " + (.commit.message | split("\n")[0]) + " (`" + .sha[0:7] + "`")" 2>/dev/null || true)"
+          CHANGES="$(gh api "repos/${REPO}/compare/nightly...${GITHUB_REF_NAME}" --jq '[.commits[] | select((.parents | length) == 1)] | reverse | .[:20][] | "* " + (.commit.message | split("\n")[0]) + " (`" + .sha[0:7] + "`")" 2>/dev/null || true)"
           if [ -z "$CHANGES" ]; then
             CHANGES="* No changes since last nightly"
           fi
 
           HASHES=""
-          for f in build/libs/*.jar; do
+          for f in mc26.2/build/libs/*.jar mc26.3/build/libs/*.jar; do
             name="$(basename "$f")"
             sha256="$(sha256sum "$f" | awk '{print $1}')"
             sha512="$(sha512sum "$f" | awk '{print $1}')"
@@ -88,23 +108,23 @@ jobs:
 
           {
             echo "**Automated Nightly Build**"
-            echo "* **Minecraft Version:** \`${MC_VERSION}\`"
-            echo "* **Base Version:** \`${BASE_VERSION}\`"
             echo "* **Build Number:** #${RUN_NUMBER}"
             echo "* **Branch:** [\`${BRANCH}\`](https://github.com/${REPO}/tree/${GITHUB_SHA})"
-            echo "* **Commit:** [\`${SHORT_SHA}\`](https://github.com/${REPO}/commit/${GITHUB_SHA})"
+            echo "* **26.2 line:** [\`${COMMIT_262:0:7}\`](https://github.com/${REPO}/commit/${COMMIT_262})"
+            echo "* **26.3 line:** [\`${COMMIT_263:0:7}\`](https://github.com/${REPO}/commit/${COMMIT_263})"
             echo "* **Built on:** ${BUILT_AT}"
             echo "* **Java Runtime:** Java 25 (Zulu)"
             echo "* **Gradle Version:** ${GRADLE_VERSION}"
             echo ""
             echo "## 📦 Dependencies"
-            echo "| Dependency | Version |"
-            echo "|------------|---------|"
-            echo "| Fabric Loader | \`${FABRIC_LOADER}\` |"
-            echo "| Fabric API | \`${FABRIC_API}\` |"
-            echo "| Fzzy Config | \`${FZZY_CONFIG}\` |"
-            echo "| Loom | \`${LOOM_VERSION}\` |"
-            echo "| Gradle | \`${GRADLE_VERSION}\` |"
+            echo "| Dependency | 26.2 line | 26.3 line |"
+            echo "|------------|-----------|-----------|"
+            echo "| Minecraft | \`${MC_VERSION_262}\` | \`${MC_VERSION_263}\` |"
+            echo "| Base Version | \`${BASE_VERSION_262}\` | \`${BASE_VERSION_263}\` |"
+            echo "| Fabric Loader | \`${FABRIC_LOADER_262}\` | \`${FABRIC_LOADER_263}\` |"
+            echo "| Fabric API | \`${FABRIC_API_262}\` | \`${FABRIC_API_263}\` |"
+            echo "| Fzzy Config | \`${FZZY_CONFIG_262}\` | \`${FZZY_CONFIG_263}\` |"
+            echo "| Loom | \`${LOOM_VERSION_262}\` | \`${LOOM_VERSION_263}\` |"
             echo ""
             echo "## 📝 Recent Changes"
             printf '%s\n' "$CHANGES"
@@ -118,21 +138,22 @@ jobs:
           cat release_notes.md
 
       - name: Update nightly pre-release
-        if: steps.meta.outputs.releaseDevBuilds == 'true'
+        if: steps.meta.outputs.mc262_releaseDevBuilds == 'true' || steps.meta.outputs.mc263_releaseDevBuilds == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
           RUN_NUMBER: ${{ github.run_number }}
-          MC_VERSION: ${{ steps.meta.outputs.minecraft_version }}
+          MC_VERSION_262: ${{ steps.meta.outputs.mc262_minecraft_version }}
+          MC_VERSION_263: ${{ steps.meta.outputs.mc263_minecraft_version }}
         shell: bash
         run: |
           TAG="nightly"
-          TITLE="Nightly (mc${MC_VERSION}, build #${RUN_NUMBER})"
+          TITLE="Nightly (mc${MC_VERSION_262} + mc${MC_VERSION_263}, build #${RUN_NUMBER})"
 
           if gh release view "$TAG" -R "$REPO" > /dev/null 2>&1; then
-            gh release upload "$TAG" build/libs/*.jar --clobber -R "$REPO"
+            gh release upload "$TAG" mc26.2/build/libs/*.jar mc26.3/build/libs/*.jar --clobber -R "$REPO"
             gh release edit "$TAG" --prerelease --title "$TITLE" --notes-file release_notes.md -R "$REPO"
           else
-            gh release create "$TAG" build/libs/*.jar --prerelease --title "$TITLE" --notes-file release_notes.md --target "$SHA" -R "$REPO"
+            gh release create "$TAG" mc26.2/build/libs/*.jar mc26.3/build/libs/*.jar --prerelease --title "$TITLE" --notes-file release_notes.md --target "$SHA" -R "$REPO"
           fi
