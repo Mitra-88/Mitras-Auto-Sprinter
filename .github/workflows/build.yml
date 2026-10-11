@@ -2,7 +2,7 @@ name: Build Mitra's Auto Sprinter
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "mc26.3-fabric" ]
   workflow_dispatch:
 
 permissions:
@@ -50,7 +50,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: Mitra's-Auto-Sprinter-${{ steps.sha.outputs.short_sha }}-master
+          name: Mitra's-Auto-Sprinter-${{ steps.sha.outputs.short_sha }}-${{ github.ref_name }}
           path: build/libs/
 
       - name: Generate release notes
