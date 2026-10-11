@@ -60,8 +60,8 @@ public final class MitrasConfig extends Config {
         private final ValidatedDouble textScaleField = new ValidatedDouble(1.0, MAX_SCALE, MIN_SCALE, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedBoolean hudBackgroundField = new ValidatedBoolean(false);
         private final ValidatedInt backgroundPaddingField = new ValidatedInt(3, 20, 0, ValidatedNumber.WidgetType.SLIDER);
-        private final ValidatedDouble hudXField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
-        private final ValidatedDouble hudYField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX);
+        private final ValidatedDouble hudXField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.SLIDER);
+        private final ValidatedDouble hudYField = new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.SLIDER);
         private final ValidatedEnum<TextColorMode> textColorModeEnum = new ValidatedEnum<>(TextColorMode.SOLID, ValidatedEnum.WidgetType.CYCLING);
 
         @SuppressWarnings("unused")
@@ -76,11 +76,11 @@ public final class MitrasConfig extends Config {
         public ValidatedEnum<HudAnchor> hudAnchor = new ValidatedEnum<>(HudAnchor.AUTO_CENTER_TOP, ValidatedEnum.WidgetType.SCROLLABLE);
         public ValidatedCondition<Double> hudX = new ValidatedCondition<>(
                 hudXField,
-                new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX))
+                new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.SLIDER))
                 .withCondition(REQUIRES_CUSTOM_ANCHOR, () -> hudAnchor.get() == HudAnchor.CUSTOM);
         public ValidatedCondition<Double> hudY = new ValidatedCondition<>(
                 hudYField,
-                new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.TEXTBOX))
+                new ValidatedDouble(0.5, 1.0, 0.0, ValidatedNumber.WidgetType.SLIDER))
                 .withCondition(REQUIRES_CUSTOM_ANCHOR, () -> hudAnchor.get() == HudAnchor.CUSTOM);
         public ValidatedCondition<Double> hudTextScale = new ValidatedCondition<>(
                 textScaleField,
