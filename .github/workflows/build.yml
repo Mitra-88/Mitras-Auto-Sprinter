@@ -40,7 +40,7 @@ jobs:
           java-version: '25'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@f9f39a915cd0648dca917c72880100a59df96944
+        uses: gradle/actions/setup-gradle@ecf8cf2dcee84990dee44a7479c2b268de61e38d
 
       - name: Read metadata
         id: meta
